@@ -35,6 +35,7 @@ app.whenReady().then(() => {
     });
     if (!ret) {
         console.log('Registration failed for global shortcut');
+        console.log('Please return to the main menu');
     }
 });
 
