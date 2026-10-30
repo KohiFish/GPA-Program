@@ -21,7 +21,7 @@ function createWindow() {
     });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(() => { 
     createWindow();
 
     const hotkey = process.platform ==='darwin'?'Command+Alt+1':'Ctrl+Alt+1';
@@ -30,7 +30,7 @@ app.whenReady().then(() => {
             mainWindow.hide();
         } else {
             mainWindow.show();
-            mainWindow.forcus();
+            mainWindow.focus();
         }
     });
     if (!ret) {
