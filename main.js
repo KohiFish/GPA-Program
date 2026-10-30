@@ -20,3 +20,24 @@ function createWindow() {
         mainWindow.hide();
     });
 }
+
+app.whenReady().then(() => {
+    createWindow();
+
+    const hotkey = process.platform ==='darwin'?'Command+Alt+1':'Ctrl+Alt+1';
+    const ret = globalShortcut.register(hotkey, () => {
+        if (mainWindow.isVisible()) {
+            mainWindow.hide();
+        } else {
+            mainWindow.show();
+            mainWindow.forcus();
+        }
+    });
+    if (!ret) {
+        console.log('Registration failed for global shortcut');
+    }
+});
+
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+})
