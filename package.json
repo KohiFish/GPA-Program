@@ -19,5 +19,8 @@
   "homepage": "https://github.com/KohiFish/GPA-Program#readme",
   "devDependencies": {
     "electron": "^45.2.0"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0"
   }
 }

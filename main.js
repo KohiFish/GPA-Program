@@ -1,4 +1,6 @@
-const { app, BrowserWindow, globalShortcut } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, session } = require('electron');
+const { fetchGrades } = require('./hac');
+if (!app.requestSingleInstanceLock()) app.quit();
 
 let mainWindow;
 
@@ -16,16 +18,27 @@ function createWindow() {
     });
 
     mainWindow.loadFile('index.html');
-    mainWindow.on('blur', () => {
-        mainWindow.hide();
+    mainWindow.on('closed', () => {
+        mainWindow = null;
     });
 }
 
-app.whenReady().then(() => { 
-    createWindow();
+ipcMain.handle('hac:fetch', async (_event, { url, user, pass }) => {
+    const ses = session.fromPartition('hac');
+    return fetchGrades((u, o) => ses.fetch(u, o), url, user, pass);
+});
 
-    const hotkey = process.platform ==='darwin'?'Command+Alt+1':'Ctrl+Alt+1';
+app.whenReady().then(() => {
+    createWindow();
+    if (process.platform === 'darwin') {
+        app.dock.hide();
+    }
+    const hotkey = 'CommandOrControl+Alt+1';
     const ret = globalShortcut.register(hotkey, () => {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+            createWindow();
+        }
+
         if (mainWindow.isVisible()) {
             mainWindow.hide();
         } else {
@@ -41,4 +54,4 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
     globalShortcut.unregisterAll();
-})
+});

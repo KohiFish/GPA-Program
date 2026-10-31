@@ -119,10 +119,22 @@
             </form>
         </div>
         <script>
-            document.getElementById('hac-login-form').addEventListener('submit', (e) => {
+            const { ipcRenderer } = require('electron')
+            document.getElementById('hac-login-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                document.getElementById('connection-status').textContent =
-                    'HAC sign-in is not implemented yet. Your credentials were not saved or sent.';
+                const status = document.getElementById('connection-status');
+                status.textContext = 'Connecting...';
+                try {
+                    const classes = await ipcRenderer.invoke('hac:fetch', {
+                        url: document.getElementById('district-url').value.replace(/\/$/, ''),
+                        user: document.getElementById('username').value,
+                        pass: document.getElementById('password').value,
+                    });
+                    console.log(classes);
+                    status.textContent = `Loaded ${classes.length} classes.`;
+                } catch (err) {
+                    status.textContent = 'Failed: ' + err.message;
+                }
             });
         </script>
     </body>
