@@ -1,7 +1,8 @@
 const cheerio = require('cheerio');
 const fs = require('fs');
 const LOGIN_PATH = '/HomeAccess/Account/LogOn';
-const ASSIGNMENT_PATH = '/HomeAccess/Classes/Classwork';
+const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+const ASSIGNMENT_PATH = '/HomeAccess/Content/Student/Assignments.aspx';
 
 function toNumber(text) {
     const n = parseFloat(String(text ?? '').replace(/[^0-9.\-]/g, ''));
@@ -9,16 +10,15 @@ function toNumber(text) {
 }
 
 function readTable($, table) {
-    const headers = $(table).find('th')
-        .map((_, th) => $(th).text().replace(/\s+/g, ' ').trim().toLowerCase())
+    const headerRow = $(table).find('tr.sg-asp-table-header-row').first();
+    const headers = headerRow.children('th, td')
+        .map((_, c) => clean($(c).text()).toLowerCase())
         .get();
     const rows = [];
-    $(table).find('tr').each((_, tr) => {
-        const cells = $(tr).children('td');
-        if (!cells.length) return;
+    $(table).find('tr.sg-asp-table-data-row').each((_, tr) => {
         const row = {};
-        cells.each((i, td) => {
-            row[headers[i] || `col${i}`] = $(td).text().replace(/\s+/g, ' ').trim();
+        $(tr).children('td').each((i, td) => {
+            row[headers[i] || `col${i}`] = clean($(td).text());
         });
         rows.push(row);
     });
@@ -82,16 +82,34 @@ async function login(fetchFn, baseUrl, user, pass) {
 }
 
 async function fetchGrades(fetchFn, baseUrl, user, pass) {
-    await login(fetchFn, baseUrl, user, pass);
-    const page = await fetchFn(baseUrl + ASSIGNMENT_PATH, { credentials: 'include' });
-    const html = await page.text();
+    let page = await fetchFn(baseUrl + ASSIGNMENT_PATH, { credentials: 'include' });
+    let html = await page.text();
+    if (cheerio.load(html)('input[type="password"]').length) {
+        await login(fetchFn, baseUrl, user, pass);
+        page = await fetchFn(baseUrl + ASSIGNMENT_PATH, { credentials: 'include' });
+        html = await page.text();
+    }
+
     if (process.env.DEV) fs.writeFileSync('debug-assignments.html', html);
     const $ = cheerio.load(html);
+    if (process.env.DEV) {
+        console.log('Page title:', $('title').text().trim());
+        console.log('HTML length:', html.length);
+        console.log('Has password box (login page?):', $('input[type="password"]').length > 0);
+        console.log('Has .AssignmentClass:', $('.AssignmentClass').length);
+        console.log('Has any table:', $('table').length);
+        console.log('Headings:', $('h1, h2, h3, .sg-header-heading').map((_, e) => $(e).text().replace(/\s+/g, ' ').trim()).get().slice(0, 15));
+    }
+
     const classes = [];
+    
 
     $('.AssignmentClass').each((_, block) => {
-        const name = $(block).find('.sg-header-heading').first().text().replace(/\s+/g, ' ').trim();
-        const averageText = $(block).find('.sg-header-sub-heading').first().text().replace(/\s+/g, ' ').trim();
+        const name = clean($(block).find('.sg-header-heading').first().text());
+        const m = clean($(block).text()).match(
+            /Course overall average is:\s*([\d.]+)\s*\/\s*([\d.]+)\s*=\s*([\d.]+)\s*%/i
+        );
+        const average = m ? parseFloat(m[3]) : null;
         const assignments = [];
         const categories = [];
 
@@ -105,12 +123,15 @@ async function fetchGrades(fetchFn, baseUrl, user, pass) {
                         dueDate: r['date due'],
                         earned: toNumber(r['score']),
                         possible: toNumber(r['total points']),
+                        weight: toNumber(r['weight']),
                     });
                 }
             } else if (headers.includes('category')) {
                 for (const r of rows) {
                     categories.push({
                         name: r['category'],
+                        earned: toNumber(find(r, /student/)),
+                        possible: toNumber(find(r, /maximum/)),
                         weight: toNumber(find(r, /weight/)),
                         percent: toNumber(find(r, /percent/)),
                     });

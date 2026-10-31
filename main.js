@@ -24,7 +24,7 @@ function createWindow() {
 }
 
 ipcMain.handle('hac:fetch', async (_event, { url, user, pass }) => {
-    const ses = session.fromPartition('hac');
+    const ses = session.fromPartition('persist:hac');
     return fetchGrades((u, o) => ses.fetch(u, o), url, user, pass);
 });
 
