@@ -376,6 +376,102 @@
                 return input;
             }
 
+            function readNumber(input) {
+                const m = parseFloat(input.value);
+                return Number.isNaN(n) ? null : n;
+            }
+
+            function renderCourseDetails(course) {
+                const categories = coruse.categories || [];
+                const state = {
+                    editing: false,
+                    items: (course.assignments || []).map((a) => {
+                        const { earned, possible } = parseScore(a);
+                        return {
+                            name: a.name || 'Assignment',
+                            category: a.category || '',
+                            dueDate: a.dueDate || '',
+                            scoretext: a.scoreText || '',
+                            earned,
+                            possible,
+                            original : earned,
+                            added: false,
+                        };
+                    }),
+                };
+                const categoryNames = categories.length
+                    ? categories.map((i) => c.name)
+                    : [... new Set(state.items.map((i) => i.category).filter(Boolean))];
+                const baseline = calcGrade(categories, state.items).total;
+                let ui = {};
+                const isChanged = (item) => item.added || item.earned !== item.original;
+                const isDirty = () => state.items.some(isChanged);
+                function update() {
+                    const result = calcGrade(categories, state, state.items);
+                    const dirty = isDirty();
+                    if (ui.whatIfBadge) {
+                        ui.whatIfBadge.className = 'badge ${gradeClass(result.total)}';
+                        ui.whatIfBadge.textContent = averageLabel(result.total);
+                        const diff = Number.isFinite(result.total) && Number.isFinite(baseline)
+                            ? result.total - baseline
+                            : null;
+                        const changed = diff !== null && Math.abs(diff) >= 0.05;
+                        ui.delta.textContent = changed
+                            ? `${diff> 0 ? '+' : ''}${diff.toFixed(1)}% vs current`
+                            : 'No change'
+                        ui.delta.className = 'delta' + (changed ? (diff > 0 ? ' up' : ' down'): '');
+                    }
+                    ui.catPercent.forEach(({ category, el }) => {
+                        const computed = result.catResults.get(norm(category.name));
+                        const value = dirty ? computed : category.percent;
+                        el.textContent = Number.isFinite(value) ? `${Math.round(value * 100) / 100}%` : 'N/A';
+                    });
+                    if (ui.note) {
+                        const mismatch = Number.isFinite(baseline) && Number.isFinite(course.average)
+                            && Math.abs(baseline - course.average) > 0.15;
+                        ui.note.textContent = 'Estimate only. Your teacher may round, drop scores, or weight things differently.'
+                            + (mismatch
+                                ? ` My calculation of your current grade (${baseline.toFixed(1)}%) differs from HAC's (${course.average.toFixed(1)}%), so treat the result as approximate.`
+                                : '');
+                }
+            }
+
+            function buildRow(item) {
+                const line = document.createElement('div');
+                line.className = 'line';
+                const info = document.createElement('div');
+                const score = document.createElement('div');
+                if (state.editing) {
+                    if (item.added) {
+                        info.className = 'wi-info';
+                        const nameInput = document.createElement('input');
+                        nameInput.type = 'text';
+                        nameInput.className = 'wi-name';
+                        nameInput.value = item.name;
+                        nameInput.addEventListener('input', () => { item.name = nameInput.value; });
+                        info.appendChild(nameInput);
+                        const select = document.createElement('select');
+                        select.className = 'wi-select';
+                        categoryNames.forEach((n) => select.appendChild(new Option(n, n)));
+                        info.appendChild(select);
+                    } else {
+                        addText(info, 'div', '', item.name);
+                        const metadata = [item.category, item. dueDate].filter(Boolean).join(' | ');
+                        if (metadata) addText(info, 'div', 'meta', metadata);
+                    }
+                    score.className = 'wi-score';
+                    const earnedInput = makeNumberInput(item.earned, 'Score');
+                    earnedInput.classList.toggle('changed', isChanged(item));
+                    earnedInput.addEventListener('input', () => {
+                        item.earned = readNumber(earnedInput);
+                        earnedInput.classList.toggle('changed', isChanged(item));
+                        update();
+                    });
+                    score.appendChild(earnedInput);
+                    addText(score, 'span', '', '/');
+                }
+            }
+
             async function fetchGrades() {
                 const url = getDistrictUrl();
                 if (!url) throw new Error('Please select your district');
