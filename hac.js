@@ -105,11 +105,11 @@ async function fetchGrades(fetchFn, baseUrl, user, pass) {
     
 
     $('.AssignmentClass').each((_, block) => {
-        const name = clean($(block).find('.sg-header-heading').first().text());
-        const m = clean($(block).text()).match(
-            /Course overall average is:\s*([\d.]+)\s*\/\s*([\d.]+)\s*=\s*([\d.]+)\s*%/i
-        );
-        const average = m ? parseFloat(m[3]) : null;
+        const fullName = clean($(block).find('.sg-header-heading').first().text());
+        const nm = fullName.match(/^(.+?\s-\s\d+)\s+(.+)$/);
+        const code = nm ? nm[1] : '';
+        const title = nm ? nm[2] : fullName;
+        const average = toNumber($(block).find('span[id*="lblOverallAverage"]').first().text());
         const assignments = [];
         const categories = [];
 
@@ -118,12 +118,12 @@ async function fetchGrades(fetchFn, baseUrl, user, pass) {
             if (headers.includes('assignment')) {
                 for (const r of rows) {
                     assignments.push({
-                        name: r['assignment'],
+                        name: r['assignment'].replace(/\s+\*$/, ''),
                         category: r['category'],
                         dueDate: r['date due'],
                         earned: toNumber(r['score']),
+                        scoreText: r['score'],
                         possible: toNumber(r['total points']),
-                        weight: toNumber(r['weight']),
                     });
                 }
             } else if (headers.includes('category')) {
@@ -138,7 +138,7 @@ async function fetchGrades(fetchFn, baseUrl, user, pass) {
                 }
             }
         });
-        classes.push({ name, averageText, categories, assignments });
+        classes.push({ fullName, code, title, average, categories, assignments });
     });
     return classes;
 }

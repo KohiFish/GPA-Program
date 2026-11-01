@@ -92,6 +92,24 @@
                 background-color: #005999;
             }
             
+            .hidden { display: none !important; }
+            .row {display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+            button.small { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; }
+            #course-list { display: flex; flex-direction: column; gap: 10px; }
+            .card { background: #2b2b2b;border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+            .card:hover {background: #343434; }
+            .card .name {font-size: 14px; font-weight: 600; }
+            .card .code { font-size: 12px; color: #aaaaaa; margin-top: 2px; }
+            .badge { min-width: 64px; text-align: center; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 15px; color: #111111; }
+            .g-a { background: #5fd97a } .g-b { background: #6cb8ff; } .g-c { background: #f0c05a; }
+            .g-d { background: #f08a5a; } .g-f { background: #e5646a; } .g-none { background: #444444; color: #cccccc; }
+            .selection-title { font-size: 12px; color: #aaaaaa; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 2px; }
+            .line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #333333; font-size: 13px; }
+            .line .meta { font-size: 11px; color: #aaaaaa; margin-top: 2px; }
+            .line .score { text-align: right; white-space: nowrap; font-weight: 600; }
+            .empty { color: #aaaaaa; font-size: 13px; }
+
+
         </style>
     </head>
     <body>
@@ -114,28 +132,176 @@
                     <label for="password">Password</label>
                     <input type="password" id="password" placeholder="Password" required>
                 </div>
-                <button type="submit">Connect and view grades</button>
+                <button type="submit">Connect</button>
                 <p id="connection-status" role="status" aria-live="polite"></p>
             </form>
         </div>
+
+        <div class="container hidden" id="courses-screen">
+            <div class="row">
+                <h2>Grades</h2>
+                <button class="small" id="refresh-btn">Refresh</button>
+            </div>
+            <p id="courses-status" class="empty"></p>
+            <div id="course-list"></div>
+        </div>
+        <div class="container hidden" id="detail-screen">
+            <div><button class="small" id="back-btn">&larr; Back</button></div>
+            <div id="detail-content"></div>
+        </div>
         <script>
-            const { ipcRenderer } = require('electron')
-            document.getElementById('hac-login-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const status = document.getElementById('connection-status');
-                status.textContext = 'Connecting...';
-                try {
-                    const classes = await ipcRenderer.invoke('hac:fetch', {
-                        url: document.getElementById('district-url').value.replace(/\/$/, ''),
-                        user: document.getElementById('username').value,
-                        pass: document.getElementById('password').value,
+            const { ipcRenderer } = require('electron');
+            const loginForm = document.getElementById('hac-login-form');
+            const connectButton = loginForm.querySelector('button[type="submit"]');
+            const connectionStatus = document.getElementById('connection-status');
+            const coursesStatus = document.getElementById('courses-status');
+            const courseList = document.getElementById('course-list');
+            const refreshButton = document.getElementById('refresh-btn');
+            const detailContent = document.getElementById('detail-content');
+
+            function showScreen(screenId) {
+                document.querySelectorAll('.container').forEach((screen) => {
+                    screen.classList.toggle('hidden', screen.id !== screenId);
+                });
+            }
+
+            function addText(parent, tagName, className, text) {
+                const element = document.createElement(tagName);
+                element.className = className;
+                element.textContent = text;
+                parent.appendChild(element);
+                return element;
+            }
+
+            function gradeClass(average) {
+                if (!Number.isFinite(average)) return 'g-none';
+                if (average >= 90) return 'g-a';
+                if (average >= 80) return 'g-b';
+                if (average >= 70) return 'g-c';
+                if (average >= 60) return 'g-d';
+                return 'g-f';
+            }
+
+            function averageLabel(average) {
+                return Number.isFinite(average) ? `${average.toFixed(1)}%` : 'N/A';
+            }
+
+            function renderCourses(classes) {
+                courseList.replaceChildren();
+                classes.forEach((course) => {
+                    const card = document.createElement('button');
+                    card.type = 'button';
+                    card.className = 'card';
+
+                    const courseInfo = document.createElement('div');
+                    addText(courseInfo, 'div', 'name', course.title || course.fullName || 'Unnamed course');
+                    if (course.code) addText(courseInfo, 'div', 'code', course.code);
+                    card.appendChild(courseInfo);
+
+                    addText(card, 'span', `badge ${gradeClass(course.average)}`, averageLabel(course.average));
+                    card.addEventListener('click', () => renderCourseDetails(course));
+                    courseList.appendChild(card);
+                });
+                coursesStatus.textContent = classes.length
+                    ? `Loaded ${classes.length} classes.`
+                    : 'No classes were found on the HAC assignments page.';
+            }
+
+            function renderCourseDetails(course) {
+                detailContent.replaceChildren();
+                const heading = document.createElement('div');
+                addText(heading, 'h2', '', course.title || course.fullName || 'Course details');
+                if (course.code) addText(heading, 'p', 'subtitle', course.code);
+                const average = document.createElement('div');
+                average.className = `badge ${gradeClass(course.average)}`;
+                average.textContent = averageLabel(course.average);
+                heading.appendChild(average);
+                detailContent.appendChild(heading);
+
+                addText(detailContent, 'h3', 'selection-title', 'Categories');
+                if (course.categories && course.categories.length) {
+                    course.categories.forEach((category) => {
+                        const line = document.createElement('div');
+                        line.className = 'line';
+                        const label = category.name || 'Category';
+                        const percent = Number.isFinite(category.percent)
+                            ? `${category.percent}%`
+                            : 'N/A';
+                        const weight = Number.isFinite(category.weight)
+                            ? `Weight: ${category.weight}%`
+                            : '';
+                        addText(line, 'span', '', label + (weight ? ` (${weight})` : ''));
+                        addText(line, 'span', 'score', percent);
+                        detailContent.appendChild(line);
                     });
-                    console.log(classes);
-                    status.textContent = `Loaded ${classes.length} classes.`;
-                } catch (err) {
-                    status.textContent = 'Failed: ' + err.message;
+                } else {
+                    addText(detailContent, 'p', 'empty', 'No category information available.');
+                }
+
+                addText(detailContent, 'h3', 'selection-title', 'Assignments');
+                if (course.assignments && course.assignments.length) {
+                    course.assignments.forEach((assignment) => {
+                        const line = document.createElement('div');
+                        line.className = 'line';
+                        const info = document.createElement('div');
+                        addText(info, 'div', '', assignment.name || 'Assignment');
+                        const metadata = [assignment.category, assignment.dueDate].filter(Boolean).join(' | ');
+                        if (metadata) addText(info, 'div', 'meta', metadata);
+                        line.appendChild(info);
+
+                        const score = assignment.scoreText || (
+                            Number.isFinite(assignment.earned) ? String(assignment.earned) : 'N/A'
+                        );
+                        const hasPointRatio = /\/\s*[\d.]+/.test(score);
+                        const points = Number.isFinite(assignment.possible) && !hasPointRatio
+                            ? ` / ${assignment.possible}`
+                            : '';
+                        addText(line, 'span', 'score', `${score}${points}`);
+                        detailContent.appendChild(line);
+                    });
+                } else {
+                    addText(detailContent, 'p', 'empty', 'No assignments found for this class.');
+                }
+
+                showScreen('detail-screen');
+            }
+
+            async function fetchGrades() {
+                return ipcRenderer.invoke('hac:fetch', {
+                    url: document.getElementById('district-url').value.replace(/\/+$/, ''),
+                    user: document.getElementById('username').value,
+                    pass: document.getElementById('password').value,
+                });
+            }
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                connectButton.disabled = true;
+                connectionStatus.textContent = 'Connecting...';
+                try {
+                    const classes = await fetchGrades();
+                    renderCourses(classes);
+                    showScreen('courses-screen');
+                } catch (error) {
+                    connectionStatus.textContent = `Failed: ${error.message || error}`;
+                } finally {
+                    connectButton.disabled = false;
                 }
             });
+
+            refreshButton.addEventListener('click', async () => {
+                refreshButton.disabled = true;
+                coursesStatus.textContent = 'Refreshing...';
+                try {
+                    renderCourses(await fetchGrades());
+                } catch (error) {
+                    coursesStatus.textContent = `Refresh failed: ${error.message || error}`;
+                } finally {
+                    refreshButton.disabled = false;
+                }
+            });
+
+            document.getElementById('back-btn').addEventListener('click', () => showScreen('courses-screen'));
         </script>
     </body>
 </html>
