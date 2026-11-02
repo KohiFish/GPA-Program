@@ -124,12 +124,12 @@
             .delta.up { color: #5fd95a; }
             .delta.down { color: #e5646a; }
             .tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom:4px; }
-            .button.small.secondary { background: #3a3a3a; }
-            .button.small.secondary:hover { background: #4a4a4a; }
+            button.small.secondary { background: #3a3a3a; }
+            button.small.secondary:hover { background: #4a4a4a; }
             .note { font-size: 11px; color: #888888; margin: 4px 0 0; }
             .wi-score { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-weight: 600; }
             .wi-input { width: 64px; padding: 4px 6px; font-size: 13px; text-align: right; }
-            .wi-input.changed { border-color: #2b2b2b; }
+            .wi-input.changed { border-color: #f0c05a; }
             .wi-input::-webkit-outer-spin-button, .wi-input::-webkit-inner-spin-button {
                 -webkit-appearance: none;
                 margin: 0;
@@ -137,7 +137,7 @@
             .wi-input { appearance: textfield; }
             .wi-info { display: flex; flex-direction: column; gap: 6px; flex: 1; }
             .wi-name { padding: 4px 6px; font-size: 13px; }
-            .wi-select { background-color: #2b2b2b; border: 1px solid #444444; color: #ffffff; border-radius: 6px; font-size: 12px; }
+            .wi-select { background-color: #2b2b2b; border: 1px solid #444444; color: #ffffff; border-radius: 6px; font-size: 12px; padding: 4px 6px; }
             button.wi-remove, button.wi-remove:hover { background: transparent; color: #e5646a; width: auto; margin: 0; padding: 0 6px; font-size: 18px; }
             .score.changed-text { text-decoration: underline dotted; }
             .text-a { color: #5fd97a; }
@@ -148,6 +148,18 @@
             ::-webkit-scrollbar-track { background: transparent; }
             ::-webkit-scrollbar-thumb { background: #444444; border-radius: 4px; }
             ::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }
+            .cat-group { border-bottom: 1px solid #333333; }
+            .cat-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; cursor: pointer; user-select: none; font-size: 13px; }
+            .cat-header:hover { background: #262626; }
+            .cat-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+            .cat-chevron { display: inline-block; width: 12px; color: #aaaaaa; }
+            .cat-name { font-weight: 600; }
+            .cat-weight { color: #aaaaaa; font-size: 12px; }
+            .cat-right { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+            .cat-points { color: #aaaaaa; font-size: 12px; }
+            .cat-pct { font-weight: 700; min-width: 52px; text-align: right; }
+            .cat-body { padding-left: 20px; }
+            .cat-body .line:last-child { border-bottom: none; }
 
         </style>
     </head>
@@ -262,7 +274,7 @@
 
             function useCustomUrl() {
                 selectedDistrict = null;
-                districtLabel.textContent = 'Other (enter URl)';
+                districtLabel.textContent = 'Other (enter URL)';
                 districtBtn.classList.remove('placeholder');
                 customUrlGroup.classList.remove('hidden');
                 setDropdownOpen(false);
@@ -338,6 +350,7 @@
             }
 
             const norm = (s) => String(s || '').trim().toLocaleLowerCase();
+            const fmtNum = (n) => String(Math.round(n * 100) / 100);
 
             function parseScore(a) {
                 const m = String(a.scoreText || '').match(/^\s*(-?[\d.]+)\s*\/\s*([\d.]+)/);
@@ -383,7 +396,7 @@
                     byCat.forEach((v) => {e += v.earned; p += v.possible });
                     total = p > 0 ? (e / p) * 100 : null;
                 }
-                return { total, catResults };
+                return { total, catResults, byCat };
             }
 
             function makeNumberInput(value, placeholder) {
@@ -403,213 +416,296 @@
             }
 
             function renderCourseDetails(course) {
-                const categories = course.categories || [];
-                const state = {
-                    editing: false,
-                    items: (course.assignments || []).map((a) => {
-                        const { earned, possible } = parseScore(a);
-                        return {
-                            name: a.name || 'Assignment',
-                            category: a.category || '',
-                            dueDate: a.dueDate || '',
-                            scoreText: a.scoreText || '',
-                            earned,
-                            possible,
-                            original : earned,
-                            added: false,
-                        };
-                    }),
-                };
-                const categoryNames = categories.length
-                    ? categories.map((c) => c.name)
-                    : [... new Set(state.items.map((i) => i.category).filter(Boolean))];
-                const baseline = calcGrade(categories, state.items).total;
-                let ui = {};
-                const isChanged = (item) => item.added || item.earned !== item.original;
-                const isDirty = () => state.items.some(isChanged);
-                function update() {
-                    const result = calcGrade(categories, state.items);
-                    const dirty = isDirty();
-                    if (ui.whatIfBadge) {
-                        ui.whatIfBadge.className = `badge ${gradeClass(result.total)}`;
-                        ui.whatIfBadge.textContent = averageLabel(result.total);
-                        const diff = Number.isFinite(result.total) && Number.isFinite(baseline)
-                            ? result.total - baseline
-                            : null;
-                        const changed = diff !== null && Math.abs(diff) >= 0.05;
-                        ui.delta.textContent = changed
-                            ? `${diff> 0 ? '+' : ''}${diff.toFixed(1)}% vs current`
-                            : 'No change'
-                        ui.delta.className = 'delta' + (changed ? (diff > 0 ? ' up' : ' down'): '');
-                    }
-                    ui.catPercent.forEach(({ category, el }) => {
-                        const computed = result.catResults.get(norm(category.name));
-                        const value = dirty ? computed : category.percent;
-                        el.textContent = Number.isFinite(value) ? `${Math.round(value * 100) / 100}%` : 'N/A';
-                        el.className = 'score ' + percentClass(value);
-                    });
-                    if (ui.note) {
-                        const mismatch = Number.isFinite(baseline) && Number.isFinite(course.average)
-                            && Math.abs(baseline - course.average) > 0.15;
-                        ui.note.textContent = 'Estimate only. Your teacher may round, drop scores, or weight things differently.'
-                            + (mismatch
-                                ? ` My calculation of your current grade (${baseline.toFixed(1)}%) differs from HAC's (${course.average.toFixed(1)}%), so treat the result as approximate.`
-                                : '');
-                }
+    const categories = course.categories || [];
+    const state = {
+        editing: false,
+        open: new Set(),
+        lastKey: '',
+        focusItem: null,
+        items: (course.assignments || []).map((a) => {
+            const { earned, possible } = parseScore(a);
+            return {
+                name: a.name || 'Assignment',
+                category: a.category || '',
+                dueDate: a.dueDate || '',
+                scoreText: a.scoreText || '',
+                earned,
+                possible,
+                original: earned,
+                added: false,
+            };
+        }),
+    };
+    const categoryNames = categories.length
+        ? categories.map((c) => c.name)
+        : [...new Set(state.items.map((i) => i.category).filter(Boolean))];
+    const baseline = calcGrade(categories, state.items).total;
+    let ui = {};
+
+    const isChanged = (item) => item.added || item.earned !== item.original;
+    const isDirty = () => state.items.some(isChanged);
+
+    function getGroups() {
+        const groups = categories.map((c) => ({ key: norm(c.name), name: c.name || 'Category', category: c }));
+        const known = new Set(groups.map((g) => g.key));
+        state.items.forEach((it) => {
+            const key = norm(it.category);
+            if (!known.has(key)) {
+                known.add(key);
+                groups.push({ key, name: it.category || 'Uncategorized', category: null });
+            }
+        });
+        return groups;
+    }
+
+    function update() {
+        const result = calcGrade(categories, state.items);
+        const dirty = isDirty();
+
+        if (ui.whatIfBadge) {
+            ui.whatIfBadge.className = `badge ${gradeClass(result.total)}`;
+            ui.whatIfBadge.textContent = averageLabel(result.total);
+            const diff = Number.isFinite(result.total) && Number.isFinite(baseline)
+                ? result.total - baseline
+                : null;
+            const changed = diff !== null && Math.abs(diff) >= 0.05;
+            ui.delta.textContent = changed
+                ? `${diff > 0 ? '+' : ''}${diff.toFixed(1)}% vs current`
+                : 'No change';
+            ui.delta.className = 'delta' + (changed ? (diff > 0 ? ' up' : ' down') : '');
+        }
+
+        ui.groups.forEach(({ key, category, percentEl, pointsEl }) => {
+            const computed = result.catResults.get(key);
+            const hacPercent = category ? category.percent : null;
+            const value = dirty || !Number.isFinite(hacPercent) ? computed : hacPercent;
+            percentEl.textContent = Number.isFinite(value) ? `${fmtNum(value)}%` : 'N/A';
+            percentEl.className = 'cat-pct ' + percentClass(value);
+            const pts = result.byCat.get(key);
+            pointsEl.textContent = pts && pts.possible > 0 ? `${fmtNum(pts.earned)} / ${fmtNum(pts.possible)}` : '';
+        });
+
+        if (ui.note) {
+            const mismatch = Number.isFinite(baseline) && Number.isFinite(course.average)
+                && Math.abs(baseline - course.average) > 0.15;
+            ui.note.textContent = 'Estimate only. Your teacher may round, drop scores, or weight things differently.'
+                + (mismatch
+                    ? ` My calculation of your current grade (${baseline.toFixed(1)}%) differs from HAC's (${course.average.toFixed(1)}%), so treat the result as approximate.`
+                    : '');
+        }
+    }
+
+    function buildRow(item) {
+        const line = document.createElement('div');
+        line.className = 'line';
+        const info = document.createElement('div');
+        const score = document.createElement('div');
+
+        if (state.editing) {
+            if (item.added) {
+                info.className = 'wi-info';
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'wi-name';
+                nameInput.value = item.name;
+                nameInput.addEventListener('input', () => { item.name = nameInput.value; });
+                info.appendChild(nameInput);
+
+                const select = document.createElement('select');
+                select.className = 'wi-select';
+                categoryNames.forEach((n) => select.appendChild(new Option(n, n)));
+                select.value = item.category;
+                select.addEventListener('change', () => {
+                    item.category = select.value;
+                    state.open.add(norm(item.category));
+                    state.lastKey = norm(item.category);
+                    state.focusItem = item;
+                    draw();
+                });
+                info.appendChild(select);
+            } else {
+                addText(info, 'div', '', item.name);
+                const metadata = [item.category, item.dueDate].filter(Boolean).join(' | ');
+                if (metadata) addText(info, 'div', 'meta', metadata);
             }
 
-            function buildRow(item) {
-                const line = document.createElement('div');
-                line.className = 'line';
-                const info = document.createElement('div');
-                const score = document.createElement('div');
-                if (state.editing) {
-                    if (item.added) {
-                        info.className = 'wi-info';
-                        const nameInput = document.createElement('input');
-                        nameInput.type = 'text';
-                        nameInput.className = 'wi-name';
-                        nameInput.value = item.name;
-                        nameInput.addEventListener('input', () => { item.name = nameInput.value; });
-                        info.appendChild(nameInput);
-                        const select = document.createElement('select');
-                        select.className = 'wi-select';
-                        categoryNames.forEach((n) => select.appendChild(new Option(n, n)));
-                        select.value = item.category;
-                        select.addEventListener('change', () => { item.category = select.value; update(); });
-                        info.appendChild(select);
-                    } else {
-                        addText(info, 'div', '', item.name);
-                        const metadata = [item.category, item. dueDate].filter(Boolean).join(' | ');
-                        if (metadata) addText(info, 'div', 'meta', metadata);
-                    }
-                    score.className = 'wi-score';
-                    const earnedInput = makeNumberInput(item.earned, 'Score');
-                    earnedInput.classList.toggle('changed', isChanged(item));
-                    earnedInput.addEventListener('input', () => {
-                        item.earned = readNumber(earnedInput);
-                        earnedInput.classList.toggle('changed', isChanged(item));
-                        update();
-                    });
-                    score.appendChild(earnedInput);
-                    addText(score, 'span', '', '/');
-                    if (item.added) {
-                        const possibleInput = makeNumberInput(item.possible, 'Total');
-                        possibleInput.addEventListener('input', () => {
-                            item.possible = readNumber (possibleInput);
-                            update();
-                        });
-                        score.appendChild(possibleInput);
-                        const remove = addText(score, 'button', 'wi-remove', '\u00d7');
-                        remove.type = 'button';
-                        remove.title = 'Remove';
-                        remove.addEventListener('click', () => {
-                            state.items = state.items.filter((i) => i !== item);
-                            draw();
-                        });
-                    } else {
-                        addText(score, 'span', '', item.possible === null ? '\u2014' : String(item.possible));
-                    }
-                } else {
-                    addText(info, 'div', '', item.name);
-                    const metadata = [item.added ? 'What-if' : '', item.category, item.dueDate]
-                        .filter(Boolean).join(' | ');
-                    if (metadata) addText(info, 'div', 'meta', metadata);
-                    let text;
-                        if (isChanged(item)) {
-                            text = `${item.earned === null ? 'N/A' : item.earned} / ${item.possible === null ? '\u2014' : item.possible}`;
-                        } else {
-                            const base = item.scoreText || (Number.isFinite(item.earned) ? String(item.earned) : 'N/A');
-                            const hasPointRatio = /\/\s*[\d.]+/.test(base);
-                            const points = Number.isFinite(item.possible) && !hasPointRatio ? ` / ${item.possible}` : '';
-                            text = `${base}${points}`;
-                        }
-                        const itemPct = Number.isFinite(item.earned) && item.possible > 0
-                            ? (item.earned / item.possible) * 100
-                            : null;
-                        score.className = 'score ' + percentClass(itemPct) + (isChanged(item) ? ' changed-text' : '');
-                        score.textContent = text;
-                    }
-                    line.appendChild(info);
-                    line.appendChild(score);
-                    return line;
-                }
+            score.className = 'wi-score';
+            const earnedInput = makeNumberInput(item.earned, 'Score');
+            earnedInput.classList.toggle('changed', isChanged(item));
+            earnedInput.addEventListener('input', () => {
+                item.earned = readNumber(earnedInput);
+                earnedInput.classList.toggle('changed', isChanged(item));
+                update();
+            });
+            if (item === state.focusItem) ui.focusEl = earnedInput;
+            score.appendChild(earnedInput);
+            addText(score, 'span', '', '/');
 
-                function draw() {
-                    detailContent.replaceChildren();
-                    ui = { catPercent: [] };
-                    const heading = document.createElement('div');
-                    addText(heading, 'h2', '', course.title || course.fullName || 'Course details');
-                    if (course.code) addText(heading, 'p', 'subtitle', course.code);
-                    detailContent.appendChild(heading);
-                    const summary = document.createElement('div');
-                    summary.className = 'summary';
-                    const currentBox = addText(summary, 'div', 'box', '');
-                    addText(currentBox, 'div', 'label', 'Current');
-                    addText(currentBox, 'div', `badge ${gradeClass(course.average)}`, averageLabel(course.average));
-                    if (state.editing || isDirty()) {
-                        const box = addText(summary, 'div', 'box', '');
-                        addText(box, 'div', 'label', 'What-if');
-                        ui.whatIfBadge = addText(box, 'div', 'badge', '');
-                        ui.delta = addText(box, 'div', 'delta', '');
-                    }
-                    detailContent.appendChild(summary);
-                    const tools = document.createElement('div');
-                    tools.className = 'tools';
-                    const editBtn = addText(tools, 'button', 'small', state.editing ? 'Done' : 'Edit grades');
-                    editBtn.type = 'button';
-                    editBtn.addEventListener('click', () => { state.editing = !state.editing; draw(); });
-                    if (state.editing) {
-                        const addBtn = addText(tools, 'button', 'small secondary', '+ Add assignment');
-                        addBtn.type = 'button';
-                        addBtn.addEventListener('click', () => {
-                            state.items.push({
-                                name: 'New assignment',
-                                category: categoryNames[0] || '',
-                                dueDate: '',
-                                scoreText: '',
-                                earned: null,
-                                possible: 100,
-                                original: null,
-                                added: true,
-                            });
-                            draw();
-                        });
-                        const resetBtn = addText(tools, 'button', 'small secondary', 'Reset');
-                        resetBtn.type = 'button';
-                        resetBtn.addEventListener('click', () => {
-                            state.items = state.items.filter((i) => !i.added);
-                            state.items.forEach((i) => { i.earned = i.original });
-                            draw();
-                        });
-                    }
-                    detailContent.appendChild(tools);
-                    if (state.editing || isDirty()) ui.note = addText(detailContent, 'p', 'note', '');
-                    addText(detailContent, 'h3', 'selection-title', 'Categories');
-                    if (categories.length) {
-                        categories.forEach((category) => {
-                            const line = document.createElement('div');
-                            line.className = 'line';
-                            const weight = Number.isFinite(category.weight) ?  ` (Weight: ${category.weight}%)` : '';
-                            addText(line, 'span', '', (category.name || 'Category') + weight);
-                            const percentEl = addText(line, 'span', 'score', '');
-                            ui.catPercent.push({ category, el: percentEl });
-                            detailContent.appendChild(line);
-                        });
-                    } else {
-                        addText(detailContent, 'p', 'empty', 'No category information available');
-                    }
-                    addText(detailContent, 'h3', 'selection-title', 'Assignments');
-                    if (state.items.length) {
-                        state.items.forEach((item) => detailContent.appendChild(buildRow(item)));
-                    } else {
-                        addText(detailContent, 'p', 'empty', 'No assignments found for this class');
-                    }
+            if (item.added) {
+                const possibleInput = makeNumberInput(item.possible, 'Total');
+                possibleInput.addEventListener('input', () => {
+                    item.possible = readNumber(possibleInput);
                     update();
-                    showScreen('detail-screen');
-                }
-                draw();
+                });
+                score.appendChild(possibleInput);
+                const remove = addText(score, 'button', 'wi-remove', '\u00d7');
+                remove.type = 'button';
+                remove.title = 'Remove';
+                remove.addEventListener('click', () => {
+                    state.items = state.items.filter((i) => i !== item);
+                    draw();
+                });
+            } else {
+                addText(score, 'span', '', item.possible === null ? '\u2014' : String(item.possible));
             }
+        } else {
+            addText(info, 'div', '', item.name);
+            const metadata = [item.added ? 'What-if' : '', item.category, item.dueDate]
+                .filter(Boolean).join(' | ');
+            if (metadata) addText(info, 'div', 'meta', metadata);
+
+            let text;
+            if (isChanged(item)) {
+                text = `${item.earned === null ? 'N/A' : item.earned} / ${item.possible === null ? '\u2014' : item.possible}`;
+            } else {
+                const base = item.scoreText || (Number.isFinite(item.earned) ? String(item.earned) : 'N/A');
+                const hasPointRatio = /\/\s*[\d.]+/.test(base);
+                const points = Number.isFinite(item.possible) && !hasPointRatio ? ` / ${item.possible}` : '';
+                text = `${base}${points}`;
+            }
+            const itemPct = Number.isFinite(item.earned) && item.possible > 0
+                ? (item.earned / item.possible) * 100
+                : null;
+            score.className = 'score ' + percentClass(itemPct) + (isChanged(item) ? ' changed-text' : '');
+            score.textContent = text;
+        }
+
+        line.appendChild(info);
+        line.appendChild(score);
+        return line;
+    }
+
+    function draw() {
+        const scroller = detailContent.closest('.container');
+        const prevTop = scroller ? scroller.scrollTop : 0;
+        detailContent.replaceChildren();
+        ui = { groups: [] };
+
+        const heading = document.createElement('div');
+        addText(heading, 'h2', '', course.title || course.fullName || 'Course details');
+        if (course.code) addText(heading, 'p', 'subtitle', course.code);
+        detailContent.appendChild(heading);
+
+        const summary = document.createElement('div');
+        summary.className = 'summary';
+        const currentBox = addText(summary, 'div', 'box', '');
+        addText(currentBox, 'div', 'label', 'Current');
+        addText(currentBox, 'div', `badge ${gradeClass(course.average)}`, averageLabel(course.average));
+        if (state.editing || isDirty()) {
+            const box = addText(summary, 'div', 'box', '');
+            addText(box, 'div', 'label', 'What-if');
+            ui.whatIfBadge = addText(box, 'div', 'badge', '');
+            ui.delta = addText(box, 'div', 'delta', '');
+        }
+        detailContent.appendChild(summary);
+
+        const tools = document.createElement('div');
+        tools.className = 'tools';
+        const editBtn = addText(tools, 'button', 'small', state.editing ? 'Done' : 'Edit grades');
+        editBtn.type = 'button';
+        editBtn.addEventListener('click', () => { state.editing = !state.editing; draw(); });
+        if (state.editing) {
+            const addBtn = addText(tools, 'button', 'small secondary', '+ Add assignment');
+            addBtn.type = 'button';
+            addBtn.addEventListener('click', () => {
+                const category = categoryNames.find((n) => norm(n) === state.lastKey) || categoryNames[0] || '';
+                const item = {
+                    name: 'New assignment',
+                    category,
+                    dueDate: '',
+                    scoreText: '',
+                    earned: null,
+                    possible: 100,
+                    original: null,
+                    added: true,
+                };
+                state.items.unshift(item);
+                state.open.add(norm(category));
+                state.lastKey = norm(category);
+                state.focusItem = item;
+                draw();
+            });
+            const resetBtn = addText(tools, 'button', 'small secondary', 'Reset');
+            resetBtn.type = 'button';
+            resetBtn.addEventListener('click', () => {
+                state.items = state.items.filter((i) => !i.added);
+                state.items.forEach((i) => { i.earned = i.original; });
+                draw();
+            });
+        }
+        detailContent.appendChild(tools);
+        if (state.editing || isDirty()) ui.note = addText(detailContent, 'p', 'note', '');
+
+        addText(detailContent, 'h3', 'selection-title', 'Categories');
+        const groups = getGroups();
+        if (!groups.length) {
+            addText(detailContent, 'p', 'empty', 'No categories or assignments found for this class.');
+        }
+        groups.forEach((g) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'cat-group';
+
+            const header = document.createElement('div');
+            header.className = 'cat-header';
+            const left = addText(header, 'div', 'cat-left', '');
+            const chevron = addText(left, 'span', 'cat-chevron', state.open.has(g.key) ? '\u25be' : '\u25b8');
+            addText(left, 'span', 'cat-name', g.name);
+            if (g.category && Number.isFinite(g.category.weight)) {
+                addText(left, 'span', 'cat-weight', `(${g.category.weight}%)`);
+            }
+            const right = addText(header, 'div', 'cat-right', '');
+            const pointsEl = addText(right, 'span', 'cat-points', '');
+            const percentEl = addText(right, 'span', 'cat-pct', '');
+            wrap.appendChild(header);
+
+            const body = document.createElement('div');
+            body.className = 'cat-body' + (state.open.has(g.key) ? '' : ' hidden');
+            const groupItems = state.items.filter((it) => norm(it.category) === g.key);
+            if (groupItems.length) {
+                groupItems.forEach((item) => body.appendChild(buildRow(item)));
+            } else {
+                addText(body, 'p', 'empty', 'No assignments in this category.');
+            }
+            wrap.appendChild(body);
+
+            header.addEventListener('click', () => {
+                const open = !state.open.has(g.key);
+                if (open) {
+                    state.open.add(g.key);
+                    state.lastKey = g.key;
+                } else {
+                    state.open.delete(g.key);
+                }
+                body.classList.toggle('hidden', !open);
+                chevron.textContent = open ? '\u25be' : '\u25b8';
+            });
+
+            ui.groups.push({ key: g.key, category: g.category, percentEl, pointsEl });
+            detailContent.appendChild(wrap);
+        });
+
+        update();
+        showScreen('detail-screen');
+        if (scroller) scroller.scrollTop = prevTop;
+        if (ui.focusEl) {
+            ui.focusEl.focus();
+            ui.focusEl.scrollIntoView({ block: 'nearest' });
+            state.focusItem = null;
+        }
+    }
+
+    draw();
+}
 
             async function fetchGrades() {
                 const url = getDistrictUrl();
