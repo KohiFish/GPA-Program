@@ -340,17 +340,18 @@
                     const key = norm(it.category);
                     const c = byCat.get(key) || { earned: 0, possible: 0 };
                     c.earned += it.earned;
+                    c.possible += it.possible;
                     byCat.set(key, c)
                 });
                 const catResults = new Map();
-                byCat.forEach((v, key) => catResult.set(key , v.possible > 0 ? (v.earned / v.possible) * 100 : null));
+                byCat.forEach((v, key) => catResults.set(key , v.possible > 0 ? (v.earned / v.possible) * 100 : null));
                 const weights = new Map(categories.map((c) => [norm(c.name), c.weight]));
                 const hasWeights = categories.some((c) => Number.isFinite(c.weight) && c.weight > 0);
                 let total = null;
                 if (hasWeights) {
                     let weightSum = 0;
                     let scoreSum = 0;
-                    catResults.forEach((pct, ket) => {
+                    catResults.forEach((pct, key) => {
                         const wt = weights.get(key);
                         if (pct === null || !Number.isFinite(wt)) return;
                         weightSum += wt;
@@ -361,6 +362,7 @@
                     let e = 0;
                     let p = 0;
                     byCat.forEach((v) => {e += v.earned; p += v.possible });
+                    total = p > 0 ? (e / p) * 100 : null;
                 }
                 return { total, catResults };
             }
@@ -371,18 +373,18 @@
                 input.min = '0';
                 input.step = 'any';
                 input.className = 'wi-input';
-                input.placeholder = 'placeholder';
+                input.placeholder = placeholder;
                 input.value = value === null ? '' : String(value);
                 return input;
             }
 
             function readNumber(input) {
-                const m = parseFloat(input.value);
+                const n = parseFloat(input.value);
                 return Number.isNaN(n) ? null : n;
             }
 
             function renderCourseDetails(course) {
-                const categories = coruse.categories || [];
+                const categories = course.categories || [];
                 const state = {
                     editing: false,
                     items: (course.assignments || []).map((a) => {
@@ -391,7 +393,7 @@
                             name: a.name || 'Assignment',
                             category: a.category || '',
                             dueDate: a.dueDate || '',
-                            scoretext: a.scoreText || '',
+                            scoreText: a.scoreText || '',
                             earned,
                             possible,
                             original : earned,
@@ -400,17 +402,17 @@
                     }),
                 };
                 const categoryNames = categories.length
-                    ? categories.map((i) => c.name)
+                    ? categories.map((c) => c.name)
                     : [... new Set(state.items.map((i) => i.category).filter(Boolean))];
                 const baseline = calcGrade(categories, state.items).total;
                 let ui = {};
                 const isChanged = (item) => item.added || item.earned !== item.original;
                 const isDirty = () => state.items.some(isChanged);
                 function update() {
-                    const result = calcGrade(categories, state, state.items);
+                    const result = calcGrade(categories, state.items);
                     const dirty = isDirty();
                     if (ui.whatIfBadge) {
-                        ui.whatIfBadge.className = 'badge ${gradeClass(result.total)}';
+                        ui.whatIfBadge.className = `badge ${gradeClass(result.total)}`;
                         ui.whatIfBadge.textContent = averageLabel(result.total);
                         const diff = Number.isFinite(result.total) && Number.isFinite(baseline)
                             ? result.total - baseline
@@ -453,6 +455,8 @@
                         const select = document.createElement('select');
                         select.className = 'wi-select';
                         categoryNames.forEach((n) => select.appendChild(new Option(n, n)));
+                        select.value = item.category;
+                        select.addEventListener('change', () => { item.category = select.value; update(); });
                         info.appendChild(select);
                     } else {
                         addText(info, 'div', '', item.name);
@@ -469,7 +473,119 @@
                     });
                     score.appendChild(earnedInput);
                     addText(score, 'span', '', '/');
+                    if (item.added) {
+                        const possibleInput = makeNumberInput(item.possible, 'Total');
+                        possibleInput.addEventListener('input', () => {
+                            item.possible = readNumber (possibleInput);
+                            update();
+                        });
+                        score.appendChild(possibleInput);
+                        const remove = addText(score, 'button', 'wi-remove', '\u00d7');
+                        remove.type = 'button';
+                        remove.title = 'Remove';
+                        remove.addEventListener('click', () => {
+                            state.items = state.items.filter((i) => i !== item);
+                            draw();
+                        });
+                    } else {
+                        addText(score, 'span', '', item.possible === null ? '\u2014' : String(item.possible));
+                    }
+                } else {
+                    addText(info, 'div', '', item.name);
+                    const metadata = [item.added ? 'What-if' : '', item.category, item.dueDate]
+                        .filter(Boolean).join(' | ');
+                    if (metadata) addText(info, 'div', 'meta', metadata);
+                    let text;
+                        if (isChanged(item)) {
+                            text = `${item.earned === null ? 'N/A' : item.earned} / ${item.possible === null ? '\u2014' : item.possible}`;
+                        } else {
+                            const base = item.scoreText || (Number.isFinite(item.earned) ? String(item.earned) : 'N/A');
+                            const hasPointRatio = /\/\s*[\d.]+/.test(base);
+                            const points = Number.isFinite(item.possible) && !hasPointRatio ? ` / ${item.possible}` : '';
+                            text = `${base}${points}`;
+                        }
+                        score.className = 'score' + (isChanged(item) ? ' changed-text' : '');
+                        score.textContent = text;
+                    }
+                    line.appendChild(info);
+                    line.appendChild(score);
+                    return line;
                 }
+
+                function draw() {
+                    detailContent.replaceChildren();
+                    ui = { catPercent: [] };
+                    const heading = document.createElement('div');
+                    addText(heading, 'h2', '', course.title || course.fullName || 'Course details');
+                    if (course.code) addText(heading, 'p', 'subtitle', course.code);
+                    detailContent.appendChild(heading);
+                    const summary = document.createElement('div');
+                    summary.className = 'summary';
+                    const currentBox = addText(summary, 'div', 'box', '');
+                    addText(currentBox, 'div', 'label', 'Current');
+                    addText(currentBox, 'div', `badge ${gradeClass(course.average)}`, averageLabel(course.average));
+                    if (state.editing || isDirty()) {
+                        const box = addText(summary, 'div', 'box', '');
+                        addText(box, 'div', 'label', 'What-if');
+                        ui.whatIfBadge = addText(box, 'div', 'badge', '');
+                        ui.delta = addText(box, 'div', 'delta', '');
+                    }
+                    detailContent.appendChild(summary);
+                    const tools = document.createElement('div');
+                    tools.className = 'tools';
+                    const editBtn = addText(tools, 'button', 'small', state.editing ? 'Done' : 'Edit grades');
+                    editBtn.type = 'button';
+                    editBtn.addEventListener('click', () => { state.editing = !state.editing; draw(); });
+                    if (state.editing) {
+                        const addBtn = addText(tools, 'button', 'small secondary', '+ Add assignment');
+                        addBtn.type = 'button';
+                        addBtn.addEventListener('click', () => {
+                            state.items.push({
+                                name: 'New assignment',
+                                category: categoryNames[0] || '',
+                                dueDate: '',
+                                scoreText: '',
+                                earned: null,
+                                possible: 100,
+                                original: null,
+                                added: true,
+                            });
+                            draw();
+                        });
+                        const resetBtn = addText(tools, 'button', 'small secondary', 'Reset');
+                        resetBtn.type = 'button';
+                        resetBtn.addEventListener('click', () => {
+                            state.items = state.items.filter((i) => !i.added);
+                            state.items.forEach((i) => { i.earned = i.original });
+                            draw();
+                        });
+                    }
+                    detailContent.appendChild(tools);
+                    if (state.editing || isDirty()) ui.note = addText(detailContent, 'p', 'note', '');
+                    addText(detailContent, 'h3', 'selection-title', 'Categories');
+                    if (categories.length) {
+                        categories.forEach((category) => {
+                            const line = document.createElement('div');
+                            line.className = 'line';
+                            const weight = Number.isFinite(category.weight) ?  ` (Weight: ${category.weight}%)` : '';
+                            addText(line, 'span', '', (category.name || 'Category') + weight);
+                            const percentEl = addText(line, 'span', 'score', '');
+                            ui.catPercent.push({ category, el: percentEl });
+                            detailContent.appendChild(line);
+                        });
+                    } else {
+                        addText(detailContent, 'p', 'empty', 'No category information available');
+                    }
+                    addText(detailContent, 'h3', 'selection-title', 'Assignments');
+                    if (state.items.length) {
+                        state.items.forEach((item) => detailContent.appendChild(buildRow(item)));
+                    } else {
+                        addText(detailContent, 'p', 'empty', 'No assignments found for this class');
+                    }
+                    update();
+                    showScreen('detail-screen');
+                }
+                draw();
             }
 
             async function fetchGrades() {
