@@ -5,12 +5,12 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "build": "electron-builder --win",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KohiFish/GPA-Program.git",
-    "build": "electron-builder --win"
+    "url": "git+https://github.com/KohiFish/GPA-Program.git"
   },
   "keywords": [],
   "type": "commonjs",
@@ -18,6 +18,12 @@
     "url": "https://github.com/KohiFish/GPA-Program/issues"
   },
   "homepage": "https://github.com/KohiFish/GPA-Program#readme",
+  "build": {
+    "appId": "com.kohifish.gpaprogram",
+    "productName": "Grade Menu",
+    "files": ["main.js", "hac.js", "index.html", "district.json", "icon.png", "package.json"],
+    "win": { "target": "nsis" }
+  },
   "devDependencies": {
     "electron": "^45.2.0",
     "electron-builder": "^26.18.0"
