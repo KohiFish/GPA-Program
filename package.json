@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "electron-packager . GradeMenu --platform=win32 --arch=x64 --out=../GradeMenu-release --overwrite"
   },
   "repository": {
     "type": "git",
@@ -21,10 +22,20 @@
   "build": {
     "appId": "com.kohifish.gpaprogram",
     "productName": "Grade Menu",
-    "files": ["main.js", "hac.js", "index.html", "district.json", "icon.png", "package.json"],
-    "win": { "target": "nsis" }
+    "files": [
+      "main.js",
+      "hac.js",
+      "index.html",
+      "district.json",
+      "icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
   },
   "devDependencies": {
+    "@electron/packager": "^20.3.0",
     "electron": "^45.2.0",
     "electron-builder": "^26.18.0"
   },
