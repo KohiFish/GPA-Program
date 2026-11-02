@@ -1,9 +1,14 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grade Menu</title>
+<!DOCTYPE html>
 <html>
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Grade Menu Demo</title>
+        <title>Grade Menu App</title>
         <style>
             * {
                 box-sizing: border-box;
@@ -121,27 +126,30 @@
             .summary { display: flex; gap: 10px; margin: 12px 0; }
             .summary .box { flex: 1; background: #2b2b2b; border-radius: 8px; padding: 8px 10px; }
             .summary .label { font-size: 11px; color: #aaaaaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-            .delta { font-size: 12px; margin-top: 6px; text-align: center; color: #aaaaaa; }
-            .delta.up { color: #5fd97a; }
+            .delta { font-size: 11px; margin-top: 6px; text-align: center; color: #aaaaaa; }
+            .delta.up { color: #5fd95a; }
             .delta.down { color: #e5646a; }
-            .tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+            .tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom:4px; }
             button.small.secondary { background: #3a3a3a; }
             button.small.secondary:hover { background: #4a4a4a; }
             .note { font-size: 11px; color: #888888; margin: 4px 0 0; }
             .wi-score { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-weight: 600; }
             .wi-input { width: 64px; padding: 4px 6px; font-size: 13px; text-align: right; }
             .wi-input.changed { border-color: #f0c05a; }
+            .wi-input::-webkit-outer-spin-button, .wi-input::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+            .wi-input { appearance: textfield; }
             .wi-info { display: flex; flex-direction: column; gap: 6px; flex: 1; }
             .wi-name { padding: 4px 6px; font-size: 13px; }
-            .wi-select { background-color: #2b2b2b; border: 1px solid #444444; color: #ffffff; border-radius: 6px; padding: 4px 6px; font-size: 12px; }
+            .wi-select { background-color: #2b2b2b; border: 1px solid #444444; color: #ffffff; border-radius: 6px; font-size: 12px; padding: 4px 6px; }
             button.wi-remove, button.wi-remove:hover { background: transparent; color: #e5646a; width: auto; margin: 0; padding: 0 6px; font-size: 18px; }
             .score.changed-text { text-decoration: underline dotted; }
             .text-a { color: #5fd97a; }
-            .text-b { color: #6cb8ff; }
+            .text-b { color: #6cb8ff }
             .text-c { color: #f08a5a; }
-            .text-f { color: #e5646a; }
-            .wi-input::-webkit-outer-spin-button, .wi-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-            .wi-input { appearance: textfield; }
+            .text-f { color: #e5645a; }
             ::-webkit-scrollbar { width: 8px; }
             ::-webkit-scrollbar-track { background: transparent; }
             ::-webkit-scrollbar-thumb { background: #444444; border-radius: 4px; }
@@ -159,508 +167,73 @@
             .cat-body { padding-left: 20px; }
             .cat-body .line:last-child { border-bottom: none; }
 
-
-        
-            html { background: #0f0f0f; }
-            body { align-items: center; justify-content: center; background: #0f0f0f; }
-            .app { width: min(420px, 100%); height: min(640px, 100vh); background: #1e1e1e; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; border: 1px solid #333333; }
-            .title-bar { -webkit-app-region: no-drag; }
-            .container { min-height: 0; }
-            .banner { margin: 0; padding: 8px 10px; background: #2b2b2b; border-radius: 8px; font-size: 12px; color: #aaaaaa; }
         </style>
-    </head>
-    <body>
-        <div class="app">
-            <div class="title-bar">Grade Menu &middot; Demo</div>
-            <div class="container" id="courses-screen">
-                <div class="row"><h2>Grades</h2></div>
-                <p class="banner">Demo with made-up sample data. Open a class, then tap Edit grades to try what-ifs.</p>
-                <p id="courses-status" class="empty"></p>
-                <div id="course-list"></div>
-            </div>
-            <div class="container hidden" id="detail-screen">
-                <div><button class="small" id="back-btn">&larr; Back</button></div>
-                <div id="detail-content"></div>
-            </div>
-        </div>
-        <script>
-            const detailContent = document.getElementById('detail-content');
-            const courseList = document.getElementById('course-list');
-            const coursesStatus = document.getElementById('courses-status');
-
-            function showScreen(screenId) {
-                document.querySelectorAll('.container').forEach((screen) => {
-                    screen.classList.toggle('hidden', screen.id !== screenId);
-                });
-            }
-
-            function addText(parent, tagName, className, text) {
-                const element = document.createElement(tagName);
-                element.className = className;
-                element.textContent = text;
-                parent.appendChild(element);
-                return element;
-            }
-
-            function gradeClass(average) {
-                if (!Number.isFinite(average)) return 'g-none';
-                if (average >= 90) return 'g-a';
-                if (average >= 80) return 'g-b';
-                if (average >= 70) return 'g-d';
-                return 'g-f';
-            }
-
-            function percentClass(pct) {
-                if (!Number.isFinite(pct)) return '';
-                if (pct >= 90) return 'text-a';
-                if (pct >= 80) return 'text-b';
-                if (pct >= 70) return 'text-c';
-                return 'text-f';
-            }
-
-            function averageLabel(average) {
-                return Number.isFinite(average) ? `${average.toFixed(1)}%` : 'N/A';
-            }
-
-            function renderCourses(classes) {
-                courseList.replaceChildren();
-                classes.forEach((course) => {
-                    const card = document.createElement('button');
-                    card.type = 'button';
-                    card.className = 'card';
-
-                    const courseInfo = document.createElement('div');
-                    addText(courseInfo, 'div', 'name', course.title || course.fullName || 'Unnamed course');
-                    if (course.code) addText(courseInfo, 'div', 'code', course.code);
-                    card.appendChild(courseInfo);
-
-                    addText(card, 'span', `badge ${gradeClass(course.average)}`, averageLabel(course.average));
-                    card.addEventListener('click', () => renderCourseDetails(course));
-                    courseList.appendChild(card);
-                });
-                coursesStatus.textContent = classes.length
-                    ? `Loaded ${classes.length} classes.`
-                    : 'No classes were found on the HAC assignments page.';
-            }
-
-            // ---------- What-if helpers ----------
-            const norm = (s) => String(s || '').trim().toLowerCase();
-            const fmtNum = (n) => String(Math.round(n * 100) / 100);
-
-            function parseScore(a) {
-                const m = String(a.scoreText || '').match(/^\s*(-?[\d.]+)\s*\/\s*([\d.]+)/);
-                if (m) {
-                    const e = parseFloat(m[1]);
-                    const p = parseFloat(m[2]);
-                    if (!Number.isNaN(e) && !Number.isNaN(p)) return { earned: e, possible: p };
-                }
-                return {
-                    earned: Number.isFinite(a.earned) ? a.earned : null,
-                    possible: Number.isFinite(a.possible) ? a.possible : null,
-                };
-            }
-
-            function calcGrade(categories, items) {
-                const byCat = new Map();
-                items.forEach((it) => {
-                    if (!Number.isFinite(it.earned) || !Number.isFinite(it.possible)) return;
-                    const key = norm(it.category);
-                    const c = byCat.get(key) || { earned: 0, possible: 0 };
-                    c.earned += it.earned;
-                    c.possible += it.possible;
-                    byCat.set(key, c);
-                });
-
-                const catResults = new Map();
-                byCat.forEach((v, key) => catResults.set(key, v.possible > 0 ? (v.earned / v.possible) * 100 : null));
-
-                const weights = new Map(categories.map((c) => [norm(c.name), c.weight]));
-                const hasWeights = categories.some((c) => Number.isFinite(c.weight) && c.weight > 0);
-
-                let total = null;
-                if (hasWeights) {
-                    let weightSum = 0;
-                    let scoreSum = 0;
-                    catResults.forEach((pct, key) => {
-                        const wt = weights.get(key);
-                        if (pct === null || !Number.isFinite(wt)) return;
-                        weightSum += wt;
-                        scoreSum += pct * wt;
-                    });
-                    total = weightSum > 0 ? scoreSum / weightSum : null;
-                } else {
-                    let e = 0;
-                    let p = 0;
-                    byCat.forEach((v) => { e += v.earned; p += v.possible; });
-                    total = p > 0 ? (e / p) * 100 : null;
-                }
-                return { total, catResults, byCat };
-            }
-
-            function makeNumberInput(value, placeholder) {
-                const input = document.createElement('input');
-                input.type = 'number';
-                input.min = '0';
-                input.step = 'any';
-                input.className = 'wi-input';
-                input.placeholder = placeholder;
-                input.value = value === null ? '' : String(value);
-                return input;
-            }
-
-            function readNumber(input) {
-                const n = parseFloat(input.value);
-                return Number.isNaN(n) ? null : n;
-            }
-
-            function renderCourseDetails(course) {
-                const categories = course.categories || [];
-                const state = {
-                    editing: false,
-                    open: new Set(),
-                    lastKey: '',
-                    focusItem: null,
-                    items: (course.assignments || []).map((a) => {
-                        const { earned, possible } = parseScore(a);
-                        return {
-                            name: a.name || 'Assignment',
-                            category: a.category || '',
-                            dueDate: a.dueDate || '',
-                            scoreText: a.scoreText || '',
-                            earned,
-                            possible,
-                            original: earned,
-                            added: false,
-                        };
-                    }),
-                };
-                const categoryNames = categories.length
-                    ? categories.map((c) => c.name)
-                    : [...new Set(state.items.map((i) => i.category).filter(Boolean))];
-                const baseline = calcGrade(categories, state.items).total;
-                let ui = {};
-
-                const isChanged = (item) => item.added || item.earned !== item.original;
-                const isDirty = () => state.items.some(isChanged);
-
-                function getGroups() {
-                    const groups = categories.map((c) => ({ key: norm(c.name), name: c.name || 'Category', category: c }));
-                    const known = new Set(groups.map((g) => g.key));
-                    state.items.forEach((it) => {
-                        const key = norm(it.category);
-                        if (!known.has(key)) {
-                            known.add(key);
-                            groups.push({ key, name: it.category || 'Uncategorized', category: null });
-                        }
-                    });
-                    return groups;
-                }
-
-                function update() {
-                    const result = calcGrade(categories, state.items);
-                    const dirty = isDirty();
-
-                    if (ui.whatIfBadge) {
-                        ui.whatIfBadge.className = `badge ${gradeClass(result.total)}`;
-                        ui.whatIfBadge.textContent = averageLabel(result.total);
-                        const diff = Number.isFinite(result.total) && Number.isFinite(baseline)
-                            ? result.total - baseline
-                            : null;
-                        const changed = diff !== null && Math.abs(diff) >= 0.05;
-                        ui.delta.textContent = changed
-                            ? `${diff > 0 ? '+' : ''}${diff.toFixed(1)}% vs current`
-                            : 'No change';
-                        ui.delta.className = 'delta' + (changed ? (diff > 0 ? ' up' : ' down') : '');
-                    }
-
-                    ui.groups.forEach(({ key, category, percentEl, pointsEl }) => {
-                        const computed = result.catResults.get(key);
-                        const hacPercent = category ? category.percent : null;
-                        const value = dirty || !Number.isFinite(hacPercent) ? computed : hacPercent;
-                        percentEl.textContent = Number.isFinite(value) ? `${fmtNum(value)}%` : 'N/A';
-                        percentEl.className = 'cat-pct ' + percentClass(value);
-                        const pts = result.byCat.get(key);
-                        pointsEl.textContent = pts && pts.possible > 0 ? `${fmtNum(pts.earned)} / ${fmtNum(pts.possible)}` : '';
-                    });
-
-                    if (ui.note) {
-                        const mismatch = Number.isFinite(baseline) && Number.isFinite(course.average)
-                            && Math.abs(baseline - course.average) > 0.15;
-                        ui.note.textContent = 'Estimate only. Your teacher may round, drop scores, or weight things differently.'
-                            + (mismatch
-                                ? ` My calculation of your current grade (${baseline.toFixed(1)}%) differs from HAC's (${course.average.toFixed(1)}%), so treat the result as approximate.`
-                                : '');
-                    }
-                }
-
-                function buildRow(item) {
-                    const line = document.createElement('div');
-                    line.className = 'line';
-                    const info = document.createElement('div');
-                    const score = document.createElement('div');
-
-                    if (state.editing) {
-                        if (item.added) {
-                            info.className = 'wi-info';
-                            const nameInput = document.createElement('input');
-                            nameInput.type = 'text';
-                            nameInput.className = 'wi-name';
-                            nameInput.value = item.name;
-                            nameInput.addEventListener('input', () => { item.name = nameInput.value; });
-                            info.appendChild(nameInput);
-
-                            const select = document.createElement('select');
-                            select.className = 'wi-select';
-                            categoryNames.forEach((n) => select.appendChild(new Option(n, n)));
-                            select.value = item.category;
-                            select.addEventListener('change', () => {
-                                item.category = select.value;
-                                state.open.add(norm(item.category));
-                                state.lastKey = norm(item.category);
-                                state.focusItem = item;
-                                draw();
-                            });
-                            info.appendChild(select);
-                        } else {
-                            addText(info, 'div', '', item.name);
-                            const metadata = [item.category, item.dueDate].filter(Boolean).join(' | ');
-                            if (metadata) addText(info, 'div', 'meta', metadata);
-                        }
-
-                        score.className = 'wi-score';
-                        const earnedInput = makeNumberInput(item.earned, 'Score');
-                        earnedInput.classList.toggle('changed', isChanged(item));
-                        earnedInput.addEventListener('input', () => {
-                            item.earned = readNumber(earnedInput);
-                            earnedInput.classList.toggle('changed', isChanged(item));
-                            update();
-                        });
-                        if (item === state.focusItem) ui.focusEl = earnedInput;
-                        score.appendChild(earnedInput);
-                        addText(score, 'span', '', '/');
-
-                        if (item.added) {
-                            const possibleInput = makeNumberInput(item.possible, 'Total');
-                            possibleInput.addEventListener('input', () => {
-                                item.possible = readNumber(possibleInput);
-                                update();
-                            });
-                            score.appendChild(possibleInput);
-                            const remove = addText(score, 'button', 'wi-remove', '\u00d7');
-                            remove.type = 'button';
-                            remove.title = 'Remove';
-                            remove.addEventListener('click', () => {
-                                state.items = state.items.filter((i) => i !== item);
-                                draw();
-                            });
-                        } else {
-                            addText(score, 'span', '', item.possible === null ? '\u2014' : String(item.possible));
-                        }
-                    } else {
-                        addText(info, 'div', '', item.name);
-                        const metadata = [item.added ? 'What-if' : '', item.category, item.dueDate]
-                            .filter(Boolean).join(' | ');
-                        if (metadata) addText(info, 'div', 'meta', metadata);
-
-                        let text;
-                        if (isChanged(item)) {
-                            text = `${item.earned === null ? 'N/A' : item.earned} / ${item.possible === null ? '\u2014' : item.possible}`;
-                        } else {
-                            const base = item.scoreText || (Number.isFinite(item.earned) ? String(item.earned) : 'N/A');
-                            const hasPointRatio = /\/\s*[\d.]+/.test(base);
-                            const points = Number.isFinite(item.possible) && !hasPointRatio ? ` / ${item.possible}` : '';
-                            text = `${base}${points}`;
-                        }
-                        const itemPct = Number.isFinite(item.earned) && item.possible > 0
-                            ? (item.earned / item.possible) * 100
-                            : null;
-                        score.className = 'score ' + percentClass(itemPct) + (isChanged(item) ? ' changed-text' : '');
-                        score.textContent = text;
-                    }
-
-                    line.appendChild(info);
-                    line.appendChild(score);
-                    return line;
-                }
-
-                function draw() {
-                    const scroller = detailContent.closest('.container');
-                    const prevTop = scroller ? scroller.scrollTop : 0;
-                    detailContent.replaceChildren();
-                    ui = { groups: [] };
-
-                    const heading = document.createElement('div');
-                    addText(heading, 'h2', '', course.title || course.fullName || 'Course details');
-                    if (course.code) addText(heading, 'p', 'subtitle', course.code);
-                    detailContent.appendChild(heading);
-
-                    const summary = document.createElement('div');
-                    summary.className = 'summary';
-                    const currentBox = addText(summary, 'div', 'box', '');
-                    addText(currentBox, 'div', 'label', 'Current');
-                    addText(currentBox, 'div', `badge ${gradeClass(course.average)}`, averageLabel(course.average));
-                    if (state.editing || isDirty()) {
-                        const box = addText(summary, 'div', 'box', '');
-                        addText(box, 'div', 'label', 'What-if');
-                        ui.whatIfBadge = addText(box, 'div', 'badge', '');
-                        ui.delta = addText(box, 'div', 'delta', '');
-                    }
-                    detailContent.appendChild(summary);
-
-                    const tools = document.createElement('div');
-                    tools.className = 'tools';
-                    const editBtn = addText(tools, 'button', 'small', state.editing ? 'Done' : 'Edit grades');
-                    editBtn.type = 'button';
-                    editBtn.addEventListener('click', () => { state.editing = !state.editing; draw(); });
-                    if (state.editing) {
-                        const addBtn = addText(tools, 'button', 'small secondary', '+ Add assignment');
-                        addBtn.type = 'button';
-                        addBtn.addEventListener('click', () => {
-                            const category = categoryNames.find((n) => norm(n) === state.lastKey) || categoryNames[0] || '';
-                            const item = {
-                                name: 'New assignment',
-                                category,
-                                dueDate: '',
-                                scoreText: '',
-                                earned: null,
-                                possible: 100,
-                                original: null,
-                                added: true,
-                            };
-                            state.items.unshift(item);
-                            state.open.add(norm(category));
-                            state.lastKey = norm(category);
-                            state.focusItem = item;
-                            draw();
-                        });
-                        const resetBtn = addText(tools, 'button', 'small secondary', 'Reset');
-                        resetBtn.type = 'button';
-                        resetBtn.addEventListener('click', () => {
-                            state.items = state.items.filter((i) => !i.added);
-                            state.items.forEach((i) => { i.earned = i.original; });
-                            draw();
-                        });
-                    }
-                    detailContent.appendChild(tools);
-                    if (state.editing || isDirty()) ui.note = addText(detailContent, 'p', 'note', '');
-
-                    addText(detailContent, 'h3', 'selection-title', 'Categories');
-                    const groups = getGroups();
-                    if (!groups.length) {
-                        addText(detailContent, 'p', 'empty', 'No categories or assignments found for this class.');
-                    }
-                    groups.forEach((g) => {
-                        const wrap = document.createElement('div');
-                        wrap.className = 'cat-group';
-
-                        const header = document.createElement('div');
-                        header.className = 'cat-header';
-                        const left = addText(header, 'div', 'cat-left', '');
-                        const chevron = addText(left, 'span', 'cat-chevron', state.open.has(g.key) ? '\u25be' : '\u25b8');
-                        addText(left, 'span', 'cat-name', g.name);
-                        if (g.category && Number.isFinite(g.category.weight)) {
-                            addText(left, 'span', 'cat-weight', `(${g.category.weight}%)`);
-                        }
-                        const right = addText(header, 'div', 'cat-right', '');
-                        const pointsEl = addText(right, 'span', 'cat-points', '');
-                        const percentEl = addText(right, 'span', 'cat-pct', '');
-                        wrap.appendChild(header);
-
-                        const body = document.createElement('div');
-                        body.className = 'cat-body' + (state.open.has(g.key) ? '' : ' hidden');
-                        const groupItems = state.items.filter((it) => norm(it.category) === g.key);
-                        if (groupItems.length) {
-                            groupItems.forEach((item) => body.appendChild(buildRow(item)));
-                        } else {
-                            addText(body, 'p', 'empty', 'No assignments in this category.');
-                        }
-                        wrap.appendChild(body);
-
-                        header.addEventListener('click', () => {
-                            const open = !state.open.has(g.key);
-                            if (open) {
-                                state.open.add(g.key);
-                                state.lastKey = g.key;
-                            } else {
-                                state.open.delete(g.key);
-                            }
-                            body.classList.toggle('hidden', !open);
-                            chevron.textContent = open ? '\u25be' : '\u25b8';
-                        });
-
-                        ui.groups.push({ key: g.key, category: g.category, percentEl, pointsEl });
-                        detailContent.appendChild(wrap);
-                    });
-
-                    update();
-                    showScreen('detail-screen');
-                    if (scroller) scroller.scrollTop = prevTop;
-                    if (ui.focusEl) {
-                        ui.focusEl.focus();
-                        ui.focusEl.scrollIntoView({ block: 'nearest' });
-                        state.focusItem = null;
-                    }
-                }
-
-                draw();
-            }
-
-
-            const a = (name, category, dueDate, earned, possible) => ({
-                name, category, dueDate, earned, possible,
-                scoreText: earned === null ? '' : earned.toFixed(2),
-            });
-            const cats = (m, n, o) => [
-                { name: 'Major Grades', weight: m },
-                { name: 'Minor Grades', weight: n },
-                { name: 'Other Grades', weight: o },
-            ];
-
-            const DEMO = [
-                {
-                    title: 'Algebra II', code: '2041 - 1', categories: cats(50, 35, 15),
-                    assignments: [
-                        a('Unit 4 Test', 'Major Grades', '11/18/2026', null, 100),
-                        a('Unit 3 Test', 'Major Grades', '10/21/2026', 88, 100),
-                        a('Unit 2 Test', 'Major Grades', '09/30/2026', 94, 100),
-                        a('Systems Quiz', 'Minor Grades', '10/16/2026', 46, 50),
-                        a('Graphing Quiz', 'Minor Grades', '10/09/2026', 40, 50),
-                        a('Homework 3.3', 'Other Grades', '10/20/2026', 20, 20),
-                        a('Homework 3.2', 'Other Grades', '10/14/2026', 18, 20),
-                    ],
-                },
-                {
-                    title: 'Biology', code: '3110 - 2', categories: cats(40, 40, 20),
-                    assignments: [
-                        a('Cell Unit Exam', 'Major Grades', '10/22/2026', 71, 100),
-                        a('Genetics Project', 'Major Grades', '11/12/2026', null, 100),
-                        a('Lab: Osmosis', 'Minor Grades', '10/08/2026', 34, 40),
-                        a('Vocab Quiz #2', 'Minor Grades', '10/15/2026', 14, 20),
-                        a('Lab: Microscopes', 'Minor Grades', '09/24/2026', 36, 40),
-                        a('Reading Notes', 'Other Grades', '10/19/2026', 9, 10),
-                        a('Extra Credit', 'Other Grades', '12/18/2026', null, 5),
-                    ],
-                },
-                {
-                    title: 'World History', code: '4120 - 3', categories: cats(50, 30, 20),
-                    assignments: [
-                        a('Unit 2 Essay', 'Major Grades', '10/27/2026', 62, 100),
-                        a('Midterm Exam', 'Major Grades', '11/20/2026', null, 100),
-                        a('Map Quiz', 'Minor Grades', '10/12/2026', 21, 25),
-                        a('Document Analysis', 'Minor Grades', '10/26/2026', 17, 25),
-                        a('Class Participation', 'Other Grades', '10/30/2026', 45, 50),
-                    ],
-                },
-            ];
-
-            DEMO.forEach((course) => {
-                const result = calcGrade(course.categories, course.assignments);
-                course.average = result.total;
-                course.categories.forEach((c) => { c.percent = result.catResults.get(norm(c.name)); });
-            });
-
-            renderCourses(DEMO);
-            document.getElementById('back-btn').addEventListener('click', () => showScreen('courses-screen'));
-        </script>
-    </body>
+<style>
+html, body { min-height:100%; }
+body { align-items:center; justify-content:center; background:#0f0f0f; }
+.app { width:min(420px,100%); height:min(640px,100vh); background:#1e1e1e; display:flex; flex-direction:column; border-radius:12px; overflow:hidden; border:1px solid #333; }
+.title-bar { -webkit-app-region:no-drag; flex-shrink:0; }
+.container { min-height:0; }
+.actions { display:flex; gap:10px; margin-top:8px; }
+.actions button { flex:1; margin-top:0; }
+button.secondary { background:#3a3a3a; }
+button.secondary:hover { background:#4a4a4a; }
+#demo-frame { display:block; flex:1; width:100%; height:100%; min-height:0; border:0; background:#0f0f0f; }
+#demo-view { display:none; flex:1; width:100%; height:100%; min-height:0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="title-bar">Grade Menu</div>
+  <main class="container" id="login-screen">
+    <div>
+      <h2>Home Access Center</h2>
+      <p class="subtitle">Sign in to your district portal</p>
+    </div>
+    <form id="signin-form">
+      <div class="form-group">
+        <label for="district">District</label>
+        <input id="district" type="text" placeholder="District name or portal URL" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input id="username" type="text" placeholder="Student ID" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+      </div>
+      <div class="actions">
+        <button type="button" id="connect-btn">Connect</button>
+        <button type="button" class="secondary" id="demo-btn">Demo</button>
+      </div>
+      <p class="note" style="margin-top:12px;">Connect is currently inactive. Choose Demo to explore sample classes and grades.</p>
+    </form>
+  </main>
+  <section id="demo-view">
+    <iframe id="demo-frame" title="Standalone grade demo"></iframe>
+  </section>
+</div>
+<script>
+const loginScreen = document.getElementById('login-screen');
+const demoView = document.getElementById('demo-view');
+const demoFrame = document.getElementById('demo-frame');
+const demoDocument = '<!DOCTYPE html>\n<html>\n    <head>\n        <meta charset="UTF-8">\n        <meta name="viewport" content="width=device-width, initial-scale=1">\n        <title>Grade Menu Demo</title>\n        <style>\n            * {\n                box-sizing: border-box;\n            }\n            body {\n                background-color: #1e1e1e;\n                color: #ffffff;\n                font-family: Arial, Helvetica, sans-serif;\n                display: flex;\n                flex-direction: column;\n                height: 100vh;\n                overflow: hidden;\n                margin: 0;\n            }\n            .title-bar {\n                -webkit-app-region: drag;\n                width: 100%;\n                height: 35px;\n                background-color: #2d2d2d;\n                display: flex;\n                align-items: center;\n                padding-left: 15px;\n                font-size: 13px;\n                font-weight: bold;\n                user-select: none;\n                flex-shrink: 0;\n            }\n            .no-drag {\n                -webkit-app-region: no-drag;\n            }\n            .container {\n                padding: 24px;\n                display: flex;\n                flex-direction: column;\n                gap: 16px;\n                overflow-y: auto;\n                flex-grow: 1;\n            }\n            h2 {\n                margin: 0 0 4px 0;\n                font-size: 20px;\n            }\n            p.subtitle {\n                margin: 0 0 16px 0;\n                color: #aaaaaa;\n                font-size: 13px;\n            }\n            .form-group {\n                display: flex;\n                flex-direction: column;\n                gap: 6px;\n                margin-bottom: 14px;\n            }\n            label {\n                font-size: 12px;\n                color: #cccccc;\n                font-weight: 500;\n            }\n            input {\n                background-color: #2b2b2b;\n                border: 1px solid #444444;\n                color: #ffffff;\n                padding: 10px 12px;\n                border-radius: 6px;\n                font-size: 14px;\n                outline: none;\n                width: 100%;\n                transition: border-color 0.2s;\n            }\n            input:focus {\n                border-color: #007acc;\n            }\n            button {\n                background-color: #007acc;\n                color: white;\n                border: none;\n                padding: 10px;\n                border-radius: 6px;\n                font-size: 14px;\n                font-weight: 600;\n                cursor: pointer;\n                margin-top: 8px;\n                width: 100%;\n                transition: background-color 0.2s;\n            }\n            button:hover {\n                background-color: #005999;\n            }\n            .dropdown-btn { background-color: #007acc; border: 1px solid #444444; color: #ffffff; padding: 10px 12px; border-radius: 6px; font-size: 14px; font-weight: 400; margin: 0; text-align: center; display: flex; justify-content: space-between; align-items: center; }\n            .dropdown-btn:hover { background-color: #005a8f; border-color: #666666; }\n            .dropdown-btn.placeholder {color: #ffffff; }\n            .dropdown-btn.open { border-color: #007acc; }\n            .dropdown-panel { background: #2b2b2b; border: 1px solid #444444; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }\n            .dropdown-panel input { background: #1e1e1e; padding: 8px 10px; font-size: 13px; }\n            #district-items { max-height: 190px; overflow-y: auto; display: flex; flex-direction: column; }\n            button.district-item { background: transparent; color: #ffffff; text-align: left; margin: 0; padding: 8px; font-size: 13px; font-weight: 500; border-radius: 4px; }\n            button.district-item:hover { background: #3a3a3a; }\n            button.district-item.other { color: #6cb8ff; border-top: 1px solid #3a3a3a; border-radius: 0; margin-top: 2px; }\n            .hidden { display: none !important; }\n            .row {display: flex; align-items: center; justify-content: space-between; gap: 10px; }\n            button.small { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; }\n            #course-list { display: flex; flex-direction: column; gap: 10px; }\n            .card { background: #2b2b2b;border-radius: 10px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }\n            .card:hover {background: #343434; }\n            .card .name {font-size: 14px; font-weight: 600; }\n            .card .code { font-size: 12px; color: #aaaaaa; margin-top: 2px; }\n            .badge { min-width: 64px; text-align: center; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 15px; color: #111111; }\n            .g-a { background: #5fd97a } .g-b { background: #6cb8ff; } .g-c { background: #f0c05a; }\n            .g-d { background: #f08a5a; } .g-f { background: #e5646a; } .g-none { background: #444444; color: #cccccc; }\n            .selection-title { font-size: 12px; color: #aaaaaa; text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 2px; }\n            .line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #333333; font-size: 13px; }\n            .line .meta { font-size: 11px; color: #aaaaaa; margin-top: 2px; }\n            .line .score { text-align: right; white-space: nowrap; font-weight: 600; }\n            .empty { color: #aaaaaa; font-size: 13px; }\n            .summary { display: flex; gap: 10px; margin: 12px 0; }\n            .summary .box { flex: 1; background: #2b2b2b; border-radius: 8px; padding: 8px 10px; }\n            .summary .label { font-size: 11px; color: #aaaaaa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }\n            .delta { font-size: 12px; margin-top: 6px; text-align: center; color: #aaaaaa; }\n            .delta.up { color: #5fd97a; }\n            .delta.down { color: #e5646a; }\n            .tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }\n            button.small.secondary { background: #3a3a3a; }\n            button.small.secondary:hover { background: #4a4a4a; }\n            .note { font-size: 11px; color: #888888; margin: 4px 0 0; }\n            .wi-score { display: flex; align-items: center; gap: 4px; white-space: nowrap; font-weight: 600; }\n            .wi-input { width: 64px; padding: 4px 6px; font-size: 13px; text-align: right; }\n            .wi-input.changed { border-color: #f0c05a; }\n            .wi-info { display: flex; flex-direction: column; gap: 6px; flex: 1; }\n            .wi-name { padding: 4px 6px; font-size: 13px; }\n            .wi-select { background-color: #2b2b2b; border: 1px solid #444444; color: #ffffff; border-radius: 6px; padding: 4px 6px; font-size: 12px; }\n            button.wi-remove, button.wi-remove:hover { background: transparent; color: #e5646a; width: auto; margin: 0; padding: 0 6px; font-size: 18px; }\n            .score.changed-text { text-decoration: underline dotted; }\n            .text-a { color: #5fd97a; }\n            .text-b { color: #6cb8ff; }\n            .text-c { color: #f08a5a; }\n            .text-f { color: #e5646a; }\n            .wi-input::-webkit-outer-spin-button, .wi-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }\n            .wi-input { appearance: textfield; }\n            ::-webkit-scrollbar { width: 8px; }\n            ::-webkit-scrollbar-track { background: transparent; }\n            ::-webkit-scrollbar-thumb { background: #444444; border-radius: 4px; }\n            ::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }\n            .cat-group { border-bottom: 1px solid #333333; }\n            .cat-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; cursor: pointer; user-select: none; font-size: 13px; }\n            .cat-header:hover { background: #262626; }\n            .cat-left { display: flex; align-items: center; gap: 8px; min-width: 0; }\n            .cat-chevron { display: inline-block; width: 12px; color: #aaaaaa; }\n            .cat-name { font-weight: 600; }\n            .cat-weight { color: #aaaaaa; font-size: 12px; }\n            .cat-right { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }\n            .cat-points { color: #aaaaaa; font-size: 12px; }\n            .cat-pct { font-weight: 700; min-width: 52px; text-align: right; }\n            .cat-body { padding-left: 20px; }\n            .cat-body .line:last-child { border-bottom: none; }\n\n\n        \n            html { background: #0f0f0f; }\n            body { align-items: center; justify-content: center; background: #0f0f0f; }\n            .app { width: min(420px, 100%); height: min(640px, 100vh); background: #1e1e1e; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; border: 1px solid #333333; }\n            .title-bar { -webkit-app-region: no-drag; }\n            .container { min-height: 0; }\n            .banner { margin: 0; padding: 8px 10px; background: #2b2b2b; border-radius: 8px; font-size: 12px; color: #aaaaaa; }\n        </style>\n    </head>\n    <body>\n        <div class="app">\n            <div class="title-bar"><button id="return-login" type="button" style="width:auto;margin:0 12px 0 0;padding:4px 9px;font-size:12px;">&larr; Sign in</button>Grade Menu &middot; Demo</div>\n            <div class="container" id="courses-screen">\n                <div class="row"><h2>Grades</h2></div>\n                <p class="banner">Demo with made-up sample data. Open a class, then tap Edit grades to try what-ifs.</p>\n                <p id="courses-status" class="empty"></p>\n                <div id="course-list"></div>\n            </div>\n            <div class="container hidden" id="detail-screen">\n                <div><button class="small" id="back-btn">&larr; Back</button></div>\n                <div id="detail-content"></div>\n            </div>\n        </div>\n        <script>\n            const detailContent = document.getElementById(\'detail-content\');\n            const courseList = document.getElementById(\'course-list\');\n            const coursesStatus = document.getElementById(\'courses-status\');\n\n            function showScreen(screenId) {\n                document.querySelectorAll(\'.container\').forEach((screen) => {\n                    screen.classList.toggle(\'hidden\', screen.id !== screenId);\n                });\n            }\n\n            function addText(parent, tagName, className, text) {\n                const element = document.createElement(tagName);\n                element.className = className;\n                element.textContent = text;\n                parent.appendChild(element);\n                return element;\n            }\n\n            function gradeClass(average) {\n                if (!Number.isFinite(average)) return \'g-none\';\n                if (average >= 90) return \'g-a\';\n                if (average >= 80) return \'g-b\';\n                if (average >= 70) return \'g-d\';\n                return \'g-f\';\n            }\n\n            function percentClass(pct) {\n                if (!Number.isFinite(pct)) return \'\';\n                if (pct >= 90) return \'text-a\';\n                if (pct >= 80) return \'text-b\';\n                if (pct >= 70) return \'text-c\';\n                return \'text-f\';\n            }\n\n            function averageLabel(average) {\n                return Number.isFinite(average) ? `${average.toFixed(1)}%` : \'N/A\';\n            }\n\n            function renderCourses(classes) {\n                courseList.replaceChildren();\n                classes.forEach((course) => {\n                    const card = document.createElement(\'button\');\n                    card.type = \'button\';\n                    card.className = \'card\';\n\n                    const courseInfo = document.createElement(\'div\');\n                    addText(courseInfo, \'div\', \'name\', course.title || course.fullName || \'Unnamed course\');\n                    if (course.code) addText(courseInfo, \'div\', \'code\', course.code);\n                    card.appendChild(courseInfo);\n\n                    addText(card, \'span\', `badge ${gradeClass(course.average)}`, averageLabel(course.average));\n                    card.addEventListener(\'click\', () => renderCourseDetails(course));\n                    courseList.appendChild(card);\n                });\n                coursesStatus.textContent = classes.length\n                    ? `Loaded ${classes.length} classes.`\n                    : \'No classes were found on the HAC assignments page.\';\n            }\n\n            // ---------- What-if helpers ----------\n            const norm = (s) => String(s || \'\').trim().toLowerCase();\n            const fmtNum = (n) => String(Math.round(n * 100) / 100);\n\n            function parseScore(a) {\n                const m = String(a.scoreText || \'\').match(/^\\s*(-?[\\d.]+)\\s*\\/\\s*([\\d.]+)/);\n                if (m) {\n                    const e = parseFloat(m[1]);\n                    const p = parseFloat(m[2]);\n                    if (!Number.isNaN(e) && !Number.isNaN(p)) return { earned: e, possible: p };\n                }\n                return {\n                    earned: Number.isFinite(a.earned) ? a.earned : null,\n                    possible: Number.isFinite(a.possible) ? a.possible : null,\n                };\n            }\n\n            function calcGrade(categories, items) {\n                const byCat = new Map();\n                items.forEach((it) => {\n                    if (!Number.isFinite(it.earned) || !Number.isFinite(it.possible)) return;\n                    const key = norm(it.category);\n                    const c = byCat.get(key) || { earned: 0, possible: 0 };\n                    c.earned += it.earned;\n                    c.possible += it.possible;\n                    byCat.set(key, c);\n                });\n\n                const catResults = new Map();\n                byCat.forEach((v, key) => catResults.set(key, v.possible > 0 ? (v.earned / v.possible) * 100 : null));\n\n                const weights = new Map(categories.map((c) => [norm(c.name), c.weight]));\n                const hasWeights = categories.some((c) => Number.isFinite(c.weight) && c.weight > 0);\n\n                let total = null;\n                if (hasWeights) {\n                    let weightSum = 0;\n                    let scoreSum = 0;\n                    catResults.forEach((pct, key) => {\n                        const wt = weights.get(key);\n                        if (pct === null || !Number.isFinite(wt)) return;\n                        weightSum += wt;\n                        scoreSum += pct * wt;\n                    });\n                    total = weightSum > 0 ? scoreSum / weightSum : null;\n                } else {\n                    let e = 0;\n                    let p = 0;\n                    byCat.forEach((v) => { e += v.earned; p += v.possible; });\n                    total = p > 0 ? (e / p) * 100 : null;\n                }\n                return { total, catResults, byCat };\n            }\n\n            function makeNumberInput(value, placeholder) {\n                const input = document.createElement(\'input\');\n                input.type = \'number\';\n                input.min = \'0\';\n                input.step = \'any\';\n                input.className = \'wi-input\';\n                input.placeholder = placeholder;\n                input.value = value === null ? \'\' : String(value);\n                return input;\n            }\n\n            function readNumber(input) {\n                const n = parseFloat(input.value);\n                return Number.isNaN(n) ? null : n;\n            }\n\n            function renderCourseDetails(course) {\n                const categories = course.categories || [];\n                const state = {\n                    editing: false,\n                    open: new Set(),\n                    lastKey: \'\',\n                    focusItem: null,\n                    items: (course.assignments || []).map((a) => {\n                        const { earned, possible } = parseScore(a);\n                        return {\n                            name: a.name || \'Assignment\',\n                            category: a.category || \'\',\n                            dueDate: a.dueDate || \'\',\n                            scoreText: a.scoreText || \'\',\n                            earned,\n                            possible,\n                            original: earned,\n                            added: false,\n                        };\n                    }),\n                };\n                const categoryNames = categories.length\n                    ? categories.map((c) => c.name)\n                    : [...new Set(state.items.map((i) => i.category).filter(Boolean))];\n                const baseline = calcGrade(categories, state.items).total;\n                let ui = {};\n\n                const isChanged = (item) => item.added || item.earned !== item.original;\n                const isDirty = () => state.items.some(isChanged);\n\n                function getGroups() {\n                    const groups = categories.map((c) => ({ key: norm(c.name), name: c.name || \'Category\', category: c }));\n                    const known = new Set(groups.map((g) => g.key));\n                    state.items.forEach((it) => {\n                        const key = norm(it.category);\n                        if (!known.has(key)) {\n                            known.add(key);\n                            groups.push({ key, name: it.category || \'Uncategorized\', category: null });\n                        }\n                    });\n                    return groups;\n                }\n\n                function update() {\n                    const result = calcGrade(categories, state.items);\n                    const dirty = isDirty();\n\n                    if (ui.whatIfBadge) {\n                        ui.whatIfBadge.className = `badge ${gradeClass(result.total)}`;\n                        ui.whatIfBadge.textContent = averageLabel(result.total);\n                        const diff = Number.isFinite(result.total) && Number.isFinite(baseline)\n                            ? result.total - baseline\n                            : null;\n                        const changed = diff !== null && Math.abs(diff) >= 0.05;\n                        ui.delta.textContent = changed\n                            ? `${diff > 0 ? \'+\' : \'\'}${diff.toFixed(1)}% vs current`\n                            : \'No change\';\n                        ui.delta.className = \'delta\' + (changed ? (diff > 0 ? \' up\' : \' down\') : \'\');\n                    }\n\n                    ui.groups.forEach(({ key, category, percentEl, pointsEl }) => {\n                        const computed = result.catResults.get(key);\n                        const hacPercent = category ? category.percent : null;\n                        const value = dirty || !Number.isFinite(hacPercent) ? computed : hacPercent;\n                        percentEl.textContent = Number.isFinite(value) ? `${fmtNum(value)}%` : \'N/A\';\n                        percentEl.className = \'cat-pct \' + percentClass(value);\n                        const pts = result.byCat.get(key);\n                        pointsEl.textContent = pts && pts.possible > 0 ? `${fmtNum(pts.earned)} / ${fmtNum(pts.possible)}` : \'\';\n                    });\n\n                    if (ui.note) {\n                        const mismatch = Number.isFinite(baseline) && Number.isFinite(course.average)\n                            && Math.abs(baseline - course.average) > 0.15;\n                        ui.note.textContent = \'Estimate only. Your teacher may round, drop scores, or weight things differently.\'\n                            + (mismatch\n                                ? ` My calculation of your current grade (${baseline.toFixed(1)}%) differs from HAC\'s (${course.average.toFixed(1)}%), so treat the result as approximate.`\n                                : \'\');\n                    }\n                }\n\n                function buildRow(item) {\n                    const line = document.createElement(\'div\');\n                    line.className = \'line\';\n                    const info = document.createElement(\'div\');\n                    const score = document.createElement(\'div\');\n\n                    if (state.editing) {\n                        if (item.added) {\n                            info.className = \'wi-info\';\n                            const nameInput = document.createElement(\'input\');\n                            nameInput.type = \'text\';\n                            nameInput.className = \'wi-name\';\n                            nameInput.value = item.name;\n                            nameInput.addEventListener(\'input\', () => { item.name = nameInput.value; });\n                            info.appendChild(nameInput);\n\n                            const select = document.createElement(\'select\');\n                            select.className = \'wi-select\';\n                            categoryNames.forEach((n) => select.appendChild(new Option(n, n)));\n                            select.value = item.category;\n                            select.addEventListener(\'change\', () => {\n                                item.category = select.value;\n                                state.open.add(norm(item.category));\n                                state.lastKey = norm(item.category);\n                                state.focusItem = item;\n                                draw();\n                            });\n                            info.appendChild(select);\n                        } else {\n                            addText(info, \'div\', \'\', item.name);\n                            const metadata = [item.category, item.dueDate].filter(Boolean).join(\' | \');\n                            if (metadata) addText(info, \'div\', \'meta\', metadata);\n                        }\n\n                        score.className = \'wi-score\';\n                        const earnedInput = makeNumberInput(item.earned, \'Score\');\n                        earnedInput.classList.toggle(\'changed\', isChanged(item));\n                        earnedInput.addEventListener(\'input\', () => {\n                            item.earned = readNumber(earnedInput);\n                            earnedInput.classList.toggle(\'changed\', isChanged(item));\n                            update();\n                        });\n                        if (item === state.focusItem) ui.focusEl = earnedInput;\n                        score.appendChild(earnedInput);\n                        addText(score, \'span\', \'\', \'/\');\n\n                        if (item.added) {\n                            const possibleInput = makeNumberInput(item.possible, \'Total\');\n                            possibleInput.addEventListener(\'input\', () => {\n                                item.possible = readNumber(possibleInput);\n                                update();\n                            });\n                            score.appendChild(possibleInput);\n                            const remove = addText(score, \'button\', \'wi-remove\', \'\\u00d7\');\n                            remove.type = \'button\';\n                            remove.title = \'Remove\';\n                            remove.addEventListener(\'click\', () => {\n                                state.items = state.items.filter((i) => i !== item);\n                                draw();\n                            });\n                        } else {\n                            addText(score, \'span\', \'\', item.possible === null ? \'\\u2014\' : String(item.possible));\n                        }\n                    } else {\n                        addText(info, \'div\', \'\', item.name);\n                        const metadata = [item.added ? \'What-if\' : \'\', item.category, item.dueDate]\n                            .filter(Boolean).join(\' | \');\n                        if (metadata) addText(info, \'div\', \'meta\', metadata);\n\n                        let text;\n                        if (isChanged(item)) {\n                            text = `${item.earned === null ? \'N/A\' : item.earned} / ${item.possible === null ? \'\\u2014\' : item.possible}`;\n                        } else {\n                            const base = item.scoreText || (Number.isFinite(item.earned) ? String(item.earned) : \'N/A\');\n                            const hasPointRatio = /\\/\\s*[\\d.]+/.test(base);\n                            const points = Number.isFinite(item.possible) && !hasPointRatio ? ` / ${item.possible}` : \'\';\n                            text = `${base}${points}`;\n                        }\n                        const itemPct = Number.isFinite(item.earned) && item.possible > 0\n                            ? (item.earned / item.possible) * 100\n                            : null;\n                        score.className = \'score \' + percentClass(itemPct) + (isChanged(item) ? \' changed-text\' : \'\');\n                        score.textContent = text;\n                    }\n\n                    line.appendChild(info);\n                    line.appendChild(score);\n                    return line;\n                }\n\n                function draw() {\n                    const scroller = detailContent.closest(\'.container\');\n                    const prevTop = scroller ? scroller.scrollTop : 0;\n                    detailContent.replaceChildren();\n                    ui = { groups: [] };\n\n                    const heading = document.createElement(\'div\');\n                    addText(heading, \'h2\', \'\', course.title || course.fullName || \'Course details\');\n                    if (course.code) addText(heading, \'p\', \'subtitle\', course.code);\n                    detailContent.appendChild(heading);\n\n                    const summary = document.createElement(\'div\');\n                    summary.className = \'summary\';\n                    const currentBox = addText(summary, \'div\', \'box\', \'\');\n                    addText(currentBox, \'div\', \'label\', \'Current\');\n                    addText(currentBox, \'div\', `badge ${gradeClass(course.average)}`, averageLabel(course.average));\n                    if (state.editing || isDirty()) {\n                        const box = addText(summary, \'div\', \'box\', \'\');\n                        addText(box, \'div\', \'label\', \'What-if\');\n                        ui.whatIfBadge = addText(box, \'div\', \'badge\', \'\');\n                        ui.delta = addText(box, \'div\', \'delta\', \'\');\n                    }\n                    detailContent.appendChild(summary);\n\n                    const tools = document.createElement(\'div\');\n                    tools.className = \'tools\';\n                    const editBtn = addText(tools, \'button\', \'small\', state.editing ? \'Done\' : \'Edit grades\');\n                    editBtn.type = \'button\';\n                    editBtn.addEventListener(\'click\', () => { state.editing = !state.editing; draw(); });\n                    if (state.editing) {\n                        const addBtn = addText(tools, \'button\', \'small secondary\', \'+ Add assignment\');\n                        addBtn.type = \'button\';\n                        addBtn.addEventListener(\'click\', () => {\n                            const category = categoryNames.find((n) => norm(n) === state.lastKey) || categoryNames[0] || \'\';\n                            const item = {\n                                name: \'New assignment\',\n                                category,\n                                dueDate: \'\',\n                                scoreText: \'\',\n                                earned: null,\n                                possible: 100,\n                                original: null,\n                                added: true,\n                            };\n                            state.items.unshift(item);\n                            state.open.add(norm(category));\n                            state.lastKey = norm(category);\n                            state.focusItem = item;\n                            draw();\n                        });\n                        const resetBtn = addText(tools, \'button\', \'small secondary\', \'Reset\');\n                        resetBtn.type = \'button\';\n                        resetBtn.addEventListener(\'click\', () => {\n                            state.items = state.items.filter((i) => !i.added);\n                            state.items.forEach((i) => { i.earned = i.original; });\n                            draw();\n                        });\n                    }\n                    detailContent.appendChild(tools);\n                    if (state.editing || isDirty()) ui.note = addText(detailContent, \'p\', \'note\', \'\');\n\n                    addText(detailContent, \'h3\', \'selection-title\', \'Categories\');\n                    const groups = getGroups();\n                    if (!groups.length) {\n                        addText(detailContent, \'p\', \'empty\', \'No categories or assignments found for this class.\');\n                    }\n                    groups.forEach((g) => {\n                        const wrap = document.createElement(\'div\');\n                        wrap.className = \'cat-group\';\n\n                        const header = document.createElement(\'div\');\n                        header.className = \'cat-header\';\n                        const left = addText(header, \'div\', \'cat-left\', \'\');\n                        const chevron = addText(left, \'span\', \'cat-chevron\', state.open.has(g.key) ? \'\\u25be\' : \'\\u25b8\');\n                        addText(left, \'span\', \'cat-name\', g.name);\n                        if (g.category && Number.isFinite(g.category.weight)) {\n                            addText(left, \'span\', \'cat-weight\', `(${g.category.weight}%)`);\n                        }\n                        const right = addText(header, \'div\', \'cat-right\', \'\');\n                        const pointsEl = addText(right, \'span\', \'cat-points\', \'\');\n                        const percentEl = addText(right, \'span\', \'cat-pct\', \'\');\n                        wrap.appendChild(header);\n\n                        const body = document.createElement(\'div\');\n                        body.className = \'cat-body\' + (state.open.has(g.key) ? \'\' : \' hidden\');\n                        const groupItems = state.items.filter((it) => norm(it.category) === g.key);\n                        if (groupItems.length) {\n                            groupItems.forEach((item) => body.appendChild(buildRow(item)));\n                        } else {\n                            addText(body, \'p\', \'empty\', \'No assignments in this category.\');\n                        }\n                        wrap.appendChild(body);\n\n                        header.addEventListener(\'click\', () => {\n                            const open = !state.open.has(g.key);\n                            if (open) {\n                                state.open.add(g.key);\n                                state.lastKey = g.key;\n                            } else {\n                                state.open.delete(g.key);\n                            }\n                            body.classList.toggle(\'hidden\', !open);\n                            chevron.textContent = open ? \'\\u25be\' : \'\\u25b8\';\n                        });\n\n                        ui.groups.push({ key: g.key, category: g.category, percentEl, pointsEl });\n                        detailContent.appendChild(wrap);\n                    });\n\n                    update();\n                    showScreen(\'detail-screen\');\n                    if (scroller) scroller.scrollTop = prevTop;\n                    if (ui.focusEl) {\n                        ui.focusEl.focus();\n                        ui.focusEl.scrollIntoView({ block: \'nearest\' });\n                        state.focusItem = null;\n                    }\n                }\n\n                draw();\n            }\n\n\n            const a = (name, category, dueDate, earned, possible) => ({\n                name, category, dueDate, earned, possible,\n                scoreText: earned === null ? \'\' : earned.toFixed(2),\n            });\n            const cats = (m, n, o) => [\n                { name: \'Major Grades\', weight: m },\n                { name: \'Minor Grades\', weight: n },\n                { name: \'Other Grades\', weight: o },\n            ];\n\n            const DEMO = [\n                {\n                    title: \'Algebra II\', code: \'2041 - 1\', categories: cats(50, 35, 15),\n                    assignments: [\n                        a(\'Unit 4 Test\', \'Major Grades\', \'11/18/2026\', null, 100),\n                        a(\'Unit 3 Test\', \'Major Grades\', \'10/21/2026\', 88, 100),\n                        a(\'Unit 2 Test\', \'Major Grades\', \'09/30/2026\', 94, 100),\n                        a(\'Systems Quiz\', \'Minor Grades\', \'10/16/2026\', 46, 50),\n                        a(\'Graphing Quiz\', \'Minor Grades\', \'10/09/2026\', 40, 50),\n                        a(\'Homework 3.3\', \'Other Grades\', \'10/20/2026\', 20, 20),\n                        a(\'Homework 3.2\', \'Other Grades\', \'10/14/2026\', 18, 20),\n                    ],\n                },\n                {\n                    title: \'Biology\', code: \'3110 - 2\', categories: cats(40, 40, 20),\n                    assignments: [\n                        a(\'Cell Unit Exam\', \'Major Grades\', \'10/22/2026\', 71, 100),\n                        a(\'Genetics Project\', \'Major Grades\', \'11/12/2026\', null, 100),\n                        a(\'Lab: Osmosis\', \'Minor Grades\', \'10/08/2026\', 34, 40),\n                        a(\'Vocab Quiz #2\', \'Minor Grades\', \'10/15/2026\', 14, 20),\n                        a(\'Lab: Microscopes\', \'Minor Grades\', \'09/24/2026\', 36, 40),\n                        a(\'Reading Notes\', \'Other Grades\', \'10/19/2026\', 9, 10),\n                        a(\'Extra Credit\', \'Other Grades\', \'12/18/2026\', null, 5),\n                    ],\n                },\n                {\n                    title: \'World History\', code: \'4120 - 3\', categories: cats(50, 30, 20),\n                    assignments: [\n                        a(\'Unit 2 Essay\', \'Major Grades\', \'10/27/2026\', 62, 100),\n                        a(\'Midterm Exam\', \'Major Grades\', \'11/20/2026\', null, 100),\n                        a(\'Map Quiz\', \'Minor Grades\', \'10/12/2026\', 21, 25),\n                        a(\'Document Analysis\', \'Minor Grades\', \'10/26/2026\', 17, 25),\n                        a(\'Class Participation\', \'Other Grades\', \'10/30/2026\', 45, 50),\n                    ],\n                },\n            ];\n\n            DEMO.forEach((course) => {\n                const result = calcGrade(course.categories, course.assignments);\n                course.average = result.total;\n                course.categories.forEach((c) => { c.percent = result.catResults.get(norm(c.name)); });\n            });\n\n            renderCourses(DEMO);\n            document.getElementById(\'back-btn\').addEventListener(\'click\', () => showScreen(\'courses-screen\'));\n            document.getElementById(\'return-login\').addEventListener(\'click\', () => { window.parent.postMessage({ type: \'grade-menu-return-login\' }, \'*\'); });\n        <\/script>\n    </body>\n</html>';
+document.getElementById('connect-btn').addEventListener('click', () => {
+  // Intentionally inactive: no network request and no sign-in attempt.
+});
+document.getElementById('signin-form').addEventListener('submit', (event) => event.preventDefault());
+document.getElementById('demo-btn').addEventListener('click', () => {
+  if (!demoFrame.srcdoc) demoFrame.srcdoc = demoDocument;
+  loginScreen.style.display = 'none';
+  demoView.style.display = 'flex';
+});
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'grade-menu-return-login') {
+    demoView.style.display = 'none';
+    loginScreen.style.display = 'flex';
+  }
+});
+</script>
+</body>
 </html>
